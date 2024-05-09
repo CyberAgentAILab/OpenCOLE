@@ -1,0 +1,70 @@
+[tool.poetry]
+name = "opencole"
+version = "0.1.0"
+description = ""
+authors = ["Dummy User <dummy_user@gmail.com>"]
+packages = [
+  { include = "layoutlib", from = "src", format = "sdist" },
+  { include = "opencole", from = "src", format = "sdist" },
+]
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.13"
+torch = [
+  {version = "^2.2.1", platform = "darwin", source = "pypi"},
+  {version = "^2.2.1+cu121", platform = "linux", source = "torch_cu121"},
+]
+torchvision = [
+  {version = "^0.17.1", platform = "darwin", source = "pypi"},
+  {version = "^0.17.1+cu121", platform = "linux", source = "torch_cu121"},
+]
+langchain = "*"
+bitsandbytes = "*"
+protobuf = "*"
+peft = "*"
+sentencepiece = "*"
+diffusers = "*"
+compel = "*"
+skia-python = "*"
+datasets = "*"
+matplotlib = "*"
+scikit-learn = "*"
+scikit-image = "*"
+setuptools = "*"
+transformers = "4.37.2"
+sentence-transformers = "*"
+huggingface-hub = "*"
+openai = "*"
+langchain-openai = "*"
+chromadb = "*"
+faiss-cpu = "*"
+seaborn = "*"
+pydantic = ">=2.5.2"
+pinjected = "*"
+
+[[tool.poetry.source]]
+name = "torch_cu121"
+url = "https://download.pytorch.org/whl/cu121"
+priority = "explicit"
+
+[tool.poetry.group.dev.dependencies]
+ipykernel = "*"
+ipython = "*"
+pytest = "*"
+mypy = "^1"
+tensorboard = "*"
+ruff = "*"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.mypy]
+ignore_missing_imports = true
+
+[tool.ruff.lint.isort]
+known-first-party = ["opencole", "layoutlib"]

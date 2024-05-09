@@ -1,0 +1,49 @@
+attribute_order:
+  - text
+  - width
+  - height
+  - left
+  - top
+  - font
+  - color
+  - text_align
+  - capitalize
+  - font_size
+  - angle
+  - letter_spacing
+  - line_height
+numerical_attributes:
+  left:
+    quantization: kmeans
+    num_bin: 128
+  top:
+    quantization: kmeans
+    num_bin: 128
+  width:
+    quantization: kmeans
+    num_bin: 128
+  height:
+    quantization: kmeans
+    num_bin: 128
+  color:
+    quantization: kmeans
+    num_bin: 128
+    shape: [3, ]
+  font_size:
+    quantization: kmeans
+    num_bin: 128
+  angle:
+    quantization: kmeans
+    num_bin: 128
+  letter_spacing:
+    quantization: kmeans
+    num_bin: 128
+  line_height:
+    quantization: kmeans
+    num_bin: 128
+categorical_attributes:
+  - font
+  - text_align
+  - capitalize
+string_attributes:
+  - text

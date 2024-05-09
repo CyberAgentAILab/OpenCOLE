@@ -1,0 +1,21 @@
+attribute_order:
+  - type
+  - width
+  - height
+  - left
+  - top
+categorical_attributes:
+  - type
+numerical_attributes:
+  left:
+    quantization: linear
+    num_bin: 128
+  top:
+    quantization: linear
+    num_bin: 128
+  width:
+    quantization: linear
+    num_bin: 128
+  height:
+    quantization: linear
+    num_bin: 128

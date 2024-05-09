@@ -1,0 +1,17 @@
+attribute_order:
+  - text
+  - width
+  - height
+  - left
+  - top
+numerical_attributes:
+  left:
+    quantization: null
+  top:
+    quantization: null
+  width:
+    quantization: null
+  height:
+    quantization: null
+string_attributes:
+  - text
