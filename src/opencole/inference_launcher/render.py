@@ -103,7 +103,6 @@ class RendererTester:
         for key in ["width", "height"]:
             example[key] = [1.0] + example[key]
 
-        example["angle"] = [0.0] * (N + 1)  # TODO: temporal, remove it
         example["opacity"] = [1.0] * (N + 1)
         example["length"] = N + 1
 

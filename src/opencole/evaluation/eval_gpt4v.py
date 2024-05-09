@@ -49,8 +49,6 @@ def main() -> None:
 
     results: list[dict] = []
 
-    # TODO (nits): parallelize execution (use ray or asyncio?)
-
     for i, image_path in enumerate(sorted(Path(args.input_dir).glob("*.*"))):
         try:
             Image.open(image_path)

@@ -44,7 +44,6 @@ def push_finetuned_sdxl() -> None:
 
 
 def push_hfds() -> None:
-    # TODO: set detailed metadata for public release
     parser = _get_base_parser()
     parser.add_argument("--fonts_path", type=str, required=True)
     args = parser.parse_args()

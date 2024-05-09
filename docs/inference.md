@@ -3,12 +3,10 @@
 We generate step-by-step since each phase loads billion-scale model.
 Note: `LOGLEVEL=(ERROR|WARNING|INFO|DEBUG)` will control the log level.
 
-# OpenCOLE
-## K-shot LLM (instead of DesignLLM)
+# Instruction
+## K-shot LLM
 
-We use LLMs for chat and do in-context learning by retrieving a few samples.
-
-Note: if you have access to cpu, installing `faiss-cpu` might enable faster ANN search.
+We use LLMs for chat and do in-context learning by retrieving a few samples, instead of a fine-tuned DesignLLM in COLE.
 
 ```python
 poetry run python -m opencole.inference_launcher.k_shot_llm --input_hfds <INPUT_HFDS> --output_dir <OUTPUT_DIR>
@@ -22,6 +20,8 @@ Please use `--input_intention_csv <INPUT_INTENTION_CSV>` to pass it.
 id,Intension
 00001,"Design an animated digital poster for a fantasy concert where Joe Hisaishi performs on a grand piano on a moonlit beach. The scene should be magical, with bioluminescent waves and a starry sky. The poster should invite viewers to an exclusive virtual event."
 ```
+
+Note: if you have access to cpu, installing `faiss-cpu` might enable faster ANN search.
 
 ## Text-to-image
 

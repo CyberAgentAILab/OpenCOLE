@@ -14,23 +14,17 @@ The example is a dict and expected to have the following keys.
 
 import random
 from copy import deepcopy
-from typing import Any, Callable
+from typing import Any, Callable, TypeAlias
 
 import datasets as ds
 from PIL import Image
 
 from layoutlib.util import argsort
 
-# TODO: use typing.TypeAlias when we drop support for 3.9
-# (<=3.9)
-# Example = dict[str, Any]
-# (>=3.10)
-# from typing import TypeAlias
-# Example: TypeAlias = dict[str, Any]
 # this is a type alias for a data emitted from huggingface datasets
-Example = dict[str, Any]
+Example: TypeAlias = dict[str, Any]
 # this is a type to indicate a subset of Example that can be handled by layoutlib.manager
-ListOnlyExample = dict[str, list[Any]]
+ListOnlyExample: TypeAlias = dict[str, list[Any]]
 
 FilterFunc = Callable[[Example, int], bool]
 

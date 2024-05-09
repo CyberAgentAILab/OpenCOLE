@@ -20,7 +20,13 @@
 
 # Overview
 
-This is an official repository for the paper.
+🤔 Automatic generation of graphic designs has recently received considerable attention.
+
+😦 However, the state-of-the-art approaches are **complex** and rely on **proprietary** datasets, which creates reproducibility barriers.
+
+🔥 In this paper, we propose an open framework for automatic graphic design called OpenCOLE, where we build a modified version of the pioneering [COLE [Jia+, arXiv'23]](https://graphic-design-generation.github.io/) and **train our model exclusively on publicly available datasets**.
+
+🚀 Based on GPT4V evaluations, our model shows promising performance comparable to the original COLE. We release the pipeline and training results to encourage **open development**.
 
 # Setup
 
@@ -35,12 +41,16 @@ This is an official repository for the paper.
 poetry install
 ```
 
-## (Dataset)
+## Dataset
 OpenCOLE dataset (v1) is available at [`cyberagent/opencole`](https://huggingface.co/datasets/cyberagent/opencole) in HuggingFace dataset hub.
 
-## (Pre-trained models)
+## Pre-trained models
 - text_to_image: [`cyberagent/opencole-stable-diffusion-xl-base-1.0-finetune`](https://huggingface.co/cyberagent/opencole-stable-diffusion-xl-base-1.0-finetune)
 - typography_lmm: [`cyberagent/opencole-typographylmm-llava-v1.5-7b-lora`](https://huggingface.co/cyberagent/opencole-typographylmm-llava-v1.5-7b-lora)
+
+## Environment variables
+
+Some part requires additional environment variables. We recommend to use [direnv](https://direnv.net/).
 
 # Inference
 

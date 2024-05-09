@@ -129,7 +129,6 @@ def main() -> None:
         logger.info(f"Processing {example.id=} {example.intention=}...")
         while n_retry < args.max_n_retry:
             try:
-                # TODO (nits) adjust the number of few-shot samples to fit the max token length limit
                 detail: DetailV1 = chain.invoke({"intention": example.intention})
             except OutputParserException:
                 n_retry += 1

@@ -438,7 +438,7 @@ class TypographyLMMTester(BaseTransformersLMTester):
                 outputs_str = outputs_str[: -len(stop_str)]  # type: ignore
             outputs_str = outputs_str.strip()
 
-            # TODO: remove this workaround (for bool type)
+            # workaround (for bool type)
             outputs_str = outputs_str.replace("False", "false")
             outputs_str = outputs_str.replace("True", "true")
 
