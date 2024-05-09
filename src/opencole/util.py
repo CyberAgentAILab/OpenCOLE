@@ -5,6 +5,10 @@ import numpy as np
 import torch
 
 
+# Instruction (modified from LayoutGPT instruction)
+TYPOGRAPHYLMM_INSTRUCTION = "Given an image and text input including set of keywords to be placed on the image and its properties (optional), plan the layout of the texts. "
+
+
 def add_sub_directory(root: Path | str, sub: str) -> Path:
     if isinstance(root, str):
         root = Path(root)

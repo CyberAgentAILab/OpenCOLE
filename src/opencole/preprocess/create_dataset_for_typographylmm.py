@@ -26,13 +26,11 @@ from opencole.model.llava import padding_layout_transform
 from opencole.preprocess.language import is_standard
 from opencole.renderer.renderer import ExampleRenderer
 from opencole.schema import DetailV1
-from opencole.util import add_sub_directory, get_crello_image_path, set_seed
+from opencole.util import add_sub_directory, get_crello_image_path, set_seed, TYPOGRAPHYLMM_INSTRUCTION
 
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 logger = logging.getLogger(__name__)
 
-# Instruction (modified from LayoutGPT instruction)
-INSTRUCTION = "Given an image and text input including set of keywords to be placed on the image and its properties (optional), plan the layout of the texts. "
 KEYS = ["canvas_width", "canvas_height"]
 
 
@@ -126,7 +124,7 @@ def main() -> None:
     logger.info(f"{manager.class_label_mappings=}")
     logger.info(f"{layout_parser.get_format_instructions()}")
 
-    instruction = f"{INSTRUCTION} {layout_parser.get_format_instructions()}"
+    instruction = f"{TYPOGRAPHYLMM_INSTRUCTION} {layout_parser.get_format_instructions()}"
 
     for split in dataset_dict:
         annotations = []

@@ -21,8 +21,6 @@ logger = logging.getLogger(__name__)
 
 torch.set_default_dtype(torch.float16)
 
-INSTRUCTION = "Given an image and text input including set of keywords to be placed on the image and its properties (optional), plan the layout of the texts. "
-
 
 def main() -> None:
     parser = argparse.ArgumentParser()
