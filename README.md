@@ -51,6 +51,12 @@ OpenCOLE dataset (v1) is available at [`cyberagent/opencole`](https://huggingfac
 ## Environment variables
 
 Some part requires additional environment variables. We recommend to use [direnv](https://direnv.net/).
+Please copy the template in [.envrc.example](.envrc.example) and modify it on your own.
+
+```bash
+cp .envrc.example .envrc
+```
+
 
 # Inference
 
