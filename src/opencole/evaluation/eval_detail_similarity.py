@@ -5,10 +5,11 @@ import os
 from pathlib import Path
 
 import datasets as ds
-from sentence_transformers import SentenceTransformer, util
 from tqdm import tqdm
 
 from opencole.schema import DetailV1
+from opencole.evaluation.sentence import compute_sentence_similarity_over_pairs
+
 
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 logger = logging.getLogger(__name__)
@@ -23,25 +24,16 @@ def main() -> None:
         required=True,
         help="Stored as json following the schema of `opencole.schema.Detail`",
     )
-    parser.add_argument("--split", default="test")
-    parser.add_argument("--model_name_or_path", type=str, default="all-MiniLM-L6-v2")
     parser.add_argument(
         "--target_attribute",
         type=str,
-        default="description",
-        choices=[
-            "keywords",
-            "description",
-            "captions_background",
-            "captions_objects",
-            "headings_heading",
-            "headings_sub_heading",
-        ],
+        required=True,
     )
+    parser.add_argument("--split", default="test")
+    parser.add_argument("--model_name_or_path", type=str, default="all-MiniLM-L6-v2")
+
     args = parser.parse_args()
     logger.info(f"{args=}")
-
-    model = SentenceTransformer(args.model_name_or_path)
 
     dataset = ds.load_dataset(args.input_hfds, split=args.split)
     gt_examples = {}
@@ -62,27 +54,11 @@ def main() -> None:
             example["id"] = id_
             pred_examples[id_] = example
 
-    scores = []
-    for id_, pred_example in tqdm(pred_examples.items(), desc="Computing similarity"):
-        gt_example = gt_examples[id_]
-        sim = _compute_similarity(
-            gt_example[args.target_attribute],
-            pred_example[args.target_attribute],
-            model,
-        )
-        scores.append(sim)
-
-    N = len(scores)
-    logger.info(f"Mean similarity for {N} samples: {sum(scores) / N}")
-
-
-def _compute_similarity(
-    sentences1: str, sentences2: str, model: SentenceTransformer
-) -> float:
-    sentences = [sentences1, sentences2]
-    emb = model.encode(sentences)
-    cos_sim = util.cos_sim(emb[0], emb[1])
-    return float(cos_sim)
+    pairs = []
+    for id_, pred_example in tqdm(pred_examples.items()):
+        pairs.append([pred_example, gt_examples[id_]])
+    similarity = compute_sentence_similarity_over_pairs(args.model_name_or_path, pairs)
+    logger.info(f"Mean similarity: {similarity=}")
 
 
 if __name__ == "__main__":
