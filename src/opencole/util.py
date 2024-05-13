@@ -39,3 +39,17 @@ def set_seed(seed: int) -> None:
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
+
+
+def validate_path(path: str | Path) -> Path:
+    assert path not in ["", None]
+    if isinstance(path, str):
+        path = Path(path)
+
+    if "." in path.name:
+        dir_ = path.parent
+    else:
+        dir_ = path
+    if not dir_.exists():
+        dir_.mkdir(parents=True, exist_ok=True)
+    return path
