@@ -36,13 +36,13 @@ Note: if you only have UNet weights, which happens in fine-tuning SDXL on your o
 ## TypographyLMM
 
 ```python
-poetry run python3 -m opencole.inference_launcher.typographylmm --pretrained_model_name_or_path <PRETRAINED_MODEL_NAME_OR_PATH> --image_dir <IMAGE_DIR> --detail_dir <DETAIL_DIR> --output_dir <OUTPUT_DIR>
+poetry run python -m opencole.inference_launcher.typographylmm --pretrained_model_name_or_path <PRETRAINED_MODEL_NAME_OR_PATH> --image_dir <IMAGE_DIR> --detail_dir <DETAIL_DIR> --output_dir <OUTPUT_DIR>
 ```
 
 ## Rendering
 
 ```python
-poetry run python3 -m opencole.inference_launcher.render --image_dir <IMAGE_DIR> --typography_dir <TYPOGRAPHY_DIR> --output_dir <OUTPUT_DIR>
+poetry run python -m opencole.inference_launcher.render --image_dir <IMAGE_DIR> --typography_dir <TYPOGRAPHY_DIR> --output_dir <OUTPUT_DIR>
 ```
 
 # Other Baselines
