@@ -1,7 +1,8 @@
 # Overview
 
 We generate step-by-step since each phase loads billion-scale model.
-Note: `LOGLEVEL=(ERROR|WARNING|INFO|DEBUG)` will control the log level.
+Note:
+- `LOGLEVEL=(ERROR|WARNING|INFO|DEBUG)` will control the log level.
 
 # Instruction
 ## K-shot LLM

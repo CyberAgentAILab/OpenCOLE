@@ -30,7 +30,7 @@ from opencole.model.llava import (
     padding_layout_transform,
 )
 from opencole.util import TYPOGRAPHYLMM_INSTRUCTION
-from opencole.schema import ChildOfDetail, DetailV1, Detail, _BaseModel
+from opencole.schema import ChildOfDetail, DetailV1, _BaseModel
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +56,6 @@ class BaseTester:
         self._max_num_trials = max_num_trials
         self._chunk_num = chunk_num
         self._chunk_index = chunk_index
-
     @property
     def generator(self) -> torch.Generator:
         return self._generator
@@ -118,6 +117,8 @@ class BaseTransformersLMTester(BaseTester):
         top_p: float | None = None,
         num_beams: int = 1,
         max_new_tokens: int = 1024,
+        # load_in_4bit: bool = False,
+        # load_in_8bit: bool = False,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
@@ -125,6 +126,9 @@ class BaseTransformersLMTester(BaseTester):
         self._top_p = top_p
         self._num_beams = num_beams
         self._max_new_tokens = max_new_tokens
+        # self._load_in_4bit = load_in_4bit
+        # self._load_in_8bit = load_in_8bit
+        # assert not (load_in_4bit and load_in_8bit), "Cannot load both 4bit and 8bit models"
 
     @classmethod
     def register_args(cls, parser: argparse.ArgumentParser) -> None:
@@ -133,6 +137,8 @@ class BaseTransformersLMTester(BaseTester):
         parser.add_argument("--top_p", type=float, default=None)
         parser.add_argument("--num_beams", type=int, default=1)
         parser.add_argument("--max_new_tokens", type=int, default=1024)
+        # parser.add_argument("--load_in_4bit", action="store_true")
+        # parser.add_argument("--load_in_8bit", action="store_true")
 
     @property
     def sampling_kwargs(self) -> dict[str, Any]:
@@ -144,6 +150,21 @@ class BaseTransformersLMTester(BaseTester):
             "max_new_tokens": self._max_new_tokens,
             "use_cache": True,
         }
+
+    # def quantization_config(self, torch_dtype: torch.dtype) -> dict[str, Any] | None:
+    #     if self._load_in_4bit:
+    #         return BitsAndBytesConfig(
+    #             load_in_4bit=True,
+    #             bnb_4bit_quant_type="nf4",
+    #             bnb_4bit_use_double_quant=True,
+    #             bnb_4bit_compute_dtype=torch_dtype
+    #         )
+    #     elif self._load_in_8bit:
+    #         return BitsAndBytesConfig(
+    #             load_in_8bit=True,
+    #         )
+    #     else:
+    #         return None
 
 
 class BASET2ITester(BaseTester):
@@ -199,17 +220,21 @@ class BASESDXLTester(BASET2ITester):
         self._num_inference_steps = num_inference_steps
         self._use_negative_prompts = use_negative_prompts
 
-        if unet_dir is None:
-            pipeline = StableDiffusionXLPipeline.from_pretrained(
-                pretrained_model_name_or_path, torch_dtype=torch.bfloat16
-            )
-        else:
-            unet = UNet2DConditionModel.from_pretrained(
+        pipeline_kwargs = {
+            "pretrained_model_name_or_path": pretrained_model_name_or_path,
+            "torch_dtype": torch.bfloat16,
+        }
+
+        # quantization_config = self.quantization_config(torch.bfloat16)
+        # if quantization_config is not None:
+        #     pipeline_kwargs["quantization_config"] = quantization_config
+
+        if unet_dir is not None:
+            pipeline_kwargs["unet"] = UNet2DConditionModel.from_pretrained(
                 unet_dir, torch_dtype=torch.bfloat16
             )
-            pipeline = StableDiffusionXLPipeline.from_pretrained(
-                pretrained_model_name_or_path, unet=unet, torch_dtype=torch.bfloat16
-            )
+
+        pipeline = StableDiffusionXLPipeline.from_pretrained(**pipeline_kwargs)
 
         if scheduler == "ddpm":
             pipeline.scheduler = DDPMScheduler.from_config(pipeline.scheduler.config)

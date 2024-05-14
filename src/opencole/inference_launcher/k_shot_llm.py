@@ -38,6 +38,7 @@ def main() -> None:
         type=str,
         default=None,
     )
+    parser.add_argument("--first_n", type=int, default=None)
 
     # model type
     parser.add_argument(
@@ -125,16 +126,16 @@ def main() -> None:
             for x in load_cole_data(split_name="designerintention_v1")
         ]
 
-    for i, example in enumerate(examples_test):
+    if args.first_n is not None:
+        examples_test = examples_test[: args.first_n]
+
+    for example in examples_test:
         logger.info(f"Processing {example.id=} {example.intention=}...")
         detail = tester({"intention": example.intention})
 
         output_path = output_dir / f"{example.id}.json"
         with output_path.open("w") as f:
             json.dump(detail.dict(), f, indent=4)
-
-        if os.environ.get("LOGLEVEL", "INFO") == "DEBUG" and i == 9:
-            break
 
 
 def _load_examples(

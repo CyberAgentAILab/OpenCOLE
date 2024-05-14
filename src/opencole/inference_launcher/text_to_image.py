@@ -5,13 +5,13 @@ import os
 from pathlib import Path
 
 from opencole.inference.tester import T2ITester
-from opencole.schema import DetailV1
+from opencole.schema import DetailV1, Detail
 
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 logger = logging.getLogger(__name__)
 
 
-def main():
+def main(DetailClass: type[Detail]):
     parser = argparse.ArgumentParser()
     T2ITester.register_args(parser)
 
@@ -29,6 +29,7 @@ def main():
     # I/O
     parser.add_argument("--detail_dir", type=str, required=True)
     parser.add_argument("--output_dir", type=str, required=True)
+    parser.add_argument("--first_n", type=int, default=None)
     args = parser.parse_args()
     logger.info(f"{args=}")
 
@@ -40,14 +41,16 @@ def main():
         **{
             k: v
             for (k, v) in vars(args).items()
-            if k not in ["output_dir", "detail_dir"]
+            if k not in ["output_dir", "detail_dir", "first_n"]
         }
     )
     json_paths = sorted(Path(args.detail_dir).glob("*.json"))
+    if args.first_n is not None:
+        json_paths = json_paths[: args.first_n]
     if tester.use_chunking:
         json_paths = tester.get_chunk(json_paths)
 
-    for i, json_path in enumerate(json_paths):
+    for json_path in json_paths:
         id_ = json_path.stem
         output_path = output_dir / f"{id_}.png"
         if output_path.exists():
@@ -56,13 +59,11 @@ def main():
 
         logger.info(f"Generating {output_path=}.")
         with open(json_path, "r") as f:
-            detail = DetailV1(**json.load(f))
+            detail = DetailClass(**json.load(f))
+
         output = tester(detail)
         output.save(str(output_path))
 
-        if os.environ.get("LOGLEVEL", "INFO") == "DEBUG" and i == 9:
-            break
-
 
 if __name__ == "__main__":
-    main()
+    main(DetailClass=DetailV1)

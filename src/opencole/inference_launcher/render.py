@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_IMAGE_SIZE = (256, 256)
 
 
-def main() -> None:
+def main(tester: "BaseRendererTester") -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--image_dir",
@@ -35,6 +35,7 @@ def main() -> None:
         help="directory containing a typography details in a JSON format. For attributes, please refer to cyberagent/crello dataset.",
     )
     parser.add_argument("--output_dir", type=str, required=True)
+    parser.add_argument("--first_n", type=int, default=None)
     args = parser.parse_args()
 
     typography_list = list(Path(args.typography_dir).glob("*.json"))
@@ -42,14 +43,14 @@ def main() -> None:
     assert len(typography_list) == len(image_list) and len(typography_list) > 0
     assert set([x.stem for x in typography_list]) == set([x.stem for x in image_list])
     typography_image_pairs = zip(sorted(typography_list), sorted(image_list))
+    if args.first_n is not None:
+        typography_image_pairs = list(typography_image_pairs)[: args.first_n]
 
     output_dir = Path(args.output_dir)
     if not output_dir.exists():
         output_dir.mkdir(parents=True, exist_ok=True)
 
-    tester = RendererTester()  # type: ignore
-
-    for i, (typography_path, image_path) in enumerate(typography_image_pairs):
+    for (typography_path, image_path) in typography_image_pairs:
         stem = typography_path.stem
         image = Image.open(str(image_path))
         with typography_path.open("r") as fp:
@@ -64,19 +65,26 @@ def main() -> None:
         output_path = output_dir / f"{stem}.png"
         output_image.save(str(output_path))
 
-        if os.environ.get("LOGLEVEL", "INFO") == "DEBUG" and i == 9:
-            break
+
+class BaseRendererTester:
+    """Basic interface for tester."""
+    def __init__(self) -> None:
+        pass
+
+    def __call__(self, background: Image.Image, typography: Example) -> Image.Image:
+        raise NotImplementedError
 
 
-class RendererTester:
+class RendererTester(BaseRendererTester):
     def __init__(self, hfds_name: str = "crello") -> None:
+        super().__init__()
         _, self.features = sample_example(hfds_name)
         self.hfds_helper = hfds_helper_factory(
             hfds_name=hfds_name, features=self.features
         )
         self.renderer = ExampleRenderer(features=self.hfds_helper.renderer_features)
 
-    def __call__(self, background: Image.Image, typography: Example) -> Any:
+    def __call__(self, background: Image.Image, typography: Example) -> Image.Image:
         typography = self.insert_image_layer(typography, background)
         W, H = background.size
         typography = self.hfds_helper.convert_for_renderer(
@@ -119,4 +127,4 @@ class RendererTester:
 
 
 if __name__ == "__main__":
-    main()
+    main(RendererTesterClass=RendererTester())

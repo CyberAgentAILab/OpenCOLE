@@ -14,7 +14,7 @@ from layoutlib.hfds.util import extract_class_label_mappings
 from layoutlib.manager import LayoutManager
 from layoutlib.schema import get_layout_pydantic_model
 from opencole.inference.tester import TypographyLMMTester
-from opencole.schema import DetailV1
+from opencole.schema import DetailV1, Detail
 
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 logger = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 torch.set_default_dtype(torch.float16)
 
 
-def main() -> None:
+def main(DetailClass: type[Detail]) -> None:
     parser = argparse.ArgumentParser()
     TypographyLMMTester.register_args(parser)
 
@@ -97,7 +97,7 @@ def main() -> None:
     for i, (detail_path, image_path) in enumerate(detail_image_pairs):
         image = Image.open(str(image_path))
         with detail_path.open("r") as fp:
-            detail = DetailV1(**json.load(fp))
+            detail = DetailClass(**json.load(fp))
         output_path = output_dir / f"{detail_path.stem}.json"
         if output_path.exists():
             logger.info(f"Skipping {detail_path.stem} since it already exists.")
@@ -116,4 +116,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    main(DetailClass=DetailV1)
