@@ -13,7 +13,7 @@ We use [SimpleTuner](https://github.com/bghira/SimpleTuner) for training text-to
 The following script saves the input prompt and the target image given each sample for SimpleTuner.
 
 ```python
-poetry run python3 -m opencole.preprocess.create_dataset_for_text_to_image --output_dir <OUTPUT_DIR> --max_size <MAX_SIZE>
+poetry run python -m opencole.preprocess.create_dataset_for_text_to_image --output_dir <OUTPUT_DIR> --max_size <MAX_SIZE>
 ```
 
 ## TypographyLMM
@@ -40,5 +40,5 @@ python dump_full_llava_weight_dicts.py --model_base <MODEL_BASE> --model_base li
 For example, to convert a llava1.5-based model, please run the following.
 
 ```python
-poetry run python3 -m opencole.hf_support.convert_llava_to_hf --model_path <MODEL_PATH> --output_dir <OUTPUT_DIR> --text_model_id lmsys/vicuna-7b-v1.5 --vision_model_id openai/clip-vit-large-patch14-336
+poetry run python -m opencole.hf_support.convert_llava_to_hf --model_path <MODEL_PATH> --output_dir <OUTPUT_DIR> --text_model_id lmsys/vicuna-7b-v1.5 --vision_model_id openai/clip-vit-large-patch14-336
 ```
