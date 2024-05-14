@@ -2,19 +2,16 @@ import argparse
 import json
 import logging
 import os
-import time
 from pathlib import Path
 
 import datasets as ds
 import pandas as pd
 from langchain.output_parsers import PydanticOutputParser
-from langchain_core.exceptions import OutputParserException
 
 from opencole.inference.langchain_helper import Example, setup_model, setup_prompt
 from opencole.inference.util import load_cole_data
+from opencole.inference.tester import LangChainTester
 from opencole.schema import DetailV1, IntentionV1
-
-MAX_RETRY = 5
 
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 logger = logging.getLogger(__name__)
@@ -22,6 +19,8 @@ logger = logging.getLogger(__name__)
 
 def main() -> None:
     parser = argparse.ArgumentParser()
+    LangChainTester.register_args(parser)
+
     # I/O
     parser.add_argument(
         "--input_hfds",
@@ -57,11 +56,11 @@ def main() -> None:
             "gpt-35-turbo",
         ],
     )
-    parser.add_argument("--sleep_sec", type=float, default=3.0)
+    parser.add_argument("--sleep_sec", type=float, default=1.0)
 
     # settings for sampling
     parser.add_argument("--temperature", type=float, default=0.7, help="temperature")
-    parser.add_argument("--max_n_retry", type=int, default=5)
+    # parser.add_argument("--max_n_retry", type=int, default=5)
 
     # in-context learning
     parser.add_argument("--k", type=int, default=5, help="k-shot in-context learning")
@@ -86,7 +85,8 @@ def main() -> None:
         )
     else:
         examples_retrieval = []
-    output_parser = PydanticOutputParser(pydantic_object=DetailV1)  # type: ignore
+    pydantic_object = DetailV1
+    output_parser = PydanticOutputParser(pydantic_object=pydantic_object)
     format_instructions = output_parser.get_format_instructions()
     model = setup_model(
         model_id=args.model_id,
@@ -102,6 +102,10 @@ def main() -> None:
     )
 
     chain = prompt | model | output_parser
+
+    tester = LangChainTester(
+        chain=chain, pydantic_object=pydantic_object, sleep_sec=args.sleep_sec
+    )
 
     # examples_test = _load_examples(input_hfds=args.input_hfds, split="test")
     if args.input_intention_csv is not None:
@@ -122,34 +126,8 @@ def main() -> None:
         ]
 
     for i, example in enumerate(examples_test):
-        if args.azure_openai_model_name is not None:
-            time.sleep(args.sleep_sec)
-
-        n_retry = 0
         logger.info(f"Processing {example.id=} {example.intention=}...")
-        while n_retry < args.max_n_retry:
-            try:
-                detail: DetailV1 = chain.invoke({"intention": example.intention})
-            except OutputParserException:
-                n_retry += 1
-                logger.info(f"Failed to parse, {n_retry=}-th retry")
-                if args.azure_openai_model_name is not None:
-                    time.sleep(args.sleep_sec)
-                continue
-            except Exception as e:
-                n_retry += 1
-                logger.info(f"Failed to parse, {n_retry=}-th retry because of {e}")
-                if args.azure_openai_model_name is not None:
-                    time.sleep(args.sleep_sec)
-                continue
-            break
-
-        if n_retry >= args.max_n_retry:
-            # when if fails to generate and parse, return a mock object
-            logger.info(
-                f"Failed to generate after {args.max_n_retry=}. Returning a mock object."
-            )
-            detail = DetailV1.get_mock()
+        detail = tester({"intention": example.intention})
 
         output_path = output_dir / f"{example.id}.json"
         with output_path.open("w") as f:

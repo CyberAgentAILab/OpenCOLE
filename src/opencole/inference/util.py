@@ -6,7 +6,7 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-CSV_PATH = str(Path(__file__).parent / "cole_{split_name}_samples.csv")
+CSV_PATH = str(Path(__file__).parent / "data" / "cole_{split_name}_samples.csv")
 
 
 class TestInput(NamedTuple):

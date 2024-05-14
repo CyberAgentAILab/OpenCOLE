@@ -17,6 +17,7 @@ from diffusers import (
 from langchain.output_parsers import PydanticOutputParser
 from langchain_core.exceptions import OutputParserException
 from PIL import Image
+import time
 
 from layoutlib.hfds.base import BaseHFDSHelper
 from layoutlib.hfds.util import Example
@@ -28,12 +29,12 @@ from opencole.model.llava import (
     load_llava,
     padding_layout_transform,
 )
-from opencole.schema import ChildOfDetail, DetailV1
+from opencole.util import TYPOGRAPHYLMM_INSTRUCTION
+from opencole.schema import ChildOfDetail, DetailV1, Detail, _BaseModel
 
 logger = logging.getLogger(__name__)
 
 NEGATIVE = "deep fried watermark cropped out-of-frame low quality low res oorly drawn bad anatomy wrong anatomy extra limb missing limb floating limbs (mutated hands and fingers)1.4 disconnected limbs mutation mutated ugly disgusting blurry amputation synthetic rendering"
-INSTRUCTION = "Given an image and text input including set of keywords to be placed on the image and its properties (optional), plan the layout of the texts. "
 
 
 class BaseTester:
@@ -390,7 +391,7 @@ class TypographyLMMTester(BaseTransformersLMTester):
         )
         self.validator = llava_output_validator_factory("text_placement")
         self.format_instructions = self.layout_parser.get_format_instructions()
-        self.instruction = f"{INSTRUCTION} {self.format_instructions}"
+        self.instruction = f"{TYPOGRAPHYLMM_INSTRUCTION} {self.format_instructions}"
 
     def get_text_input(self, detail: DetailV1) -> str:
         texts = []
@@ -495,3 +496,39 @@ class TypographyLMMTester(BaseTransformersLMTester):
             method="from_square",
         )
         return layout_hfds
+
+
+class LangChainTester(BaseTester):
+    def __init__(
+        self, chain, pydantic_object: type[_BaseModel], sleep_sec: float = 1.0, **kwargs: Any
+    ) -> None:
+        super().__init__(**kwargs)
+        self.chain = chain
+        self.sleep_sec = sleep_sec
+        self.pydantic_object = pydantic_object
+
+    def __call__(self, input_: dict) -> _BaseModel:
+        n_retry = 0
+        while n_retry < self.max_num_trials:
+            time.sleep(self.sleep_sec)
+
+            try:
+                output = self.chain.invoke(input_)
+            except OutputParserException:
+                n_retry += 1
+                logger.info(f"Failed to parse, {n_retry=}-th retry")
+                continue
+            except Exception as e:
+                n_retry += 1
+                logger.info(f"Failed to parse, {n_retry=}-th retry because of {e}")
+                continue
+            break
+
+        if n_retry >= self.max_num_trials:
+            # when if fails to generate and parse, return a mock object
+            logger.info(
+                f"Failed to generate inspite of trying {self.max_num_trials=} times. Returning a mock object."
+            )
+            output = self.pydantic_object.get_mock()
+
+        return output
