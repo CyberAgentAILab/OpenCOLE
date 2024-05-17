@@ -2,7 +2,7 @@
 name = "opencole"
 version = "0.1.0"
 description = ""
-authors = ["Dummy User <dummy_user@gmail.com>"]
+authors = ["Naoto Inoue <inoue_naoto@cyberagent.co.jp>"]
 packages = [
   { include = "layoutlib", from = "src", format = "sdist" },
   { include = "opencole", from = "src", format = "sdist" },
