@@ -22,10 +22,11 @@ def main(DetailClass: type[Detail]):
         required=True,
     )
     parser.add_argument(
-        "--unet_dir",
+        "--finetuned_unet_dir",
         type=str,
         help="Path to the fine-tuned UNet model for SDXL",
     )
+    parser.add_argument("--lora_weights_path", type=str, help="Path to the LoRA weights for SDXL")
     # I/O
     parser.add_argument("--detail_dir", type=str, required=True)
     parser.add_argument("--output_dir", type=str, required=True)

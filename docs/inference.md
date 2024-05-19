@@ -32,7 +32,7 @@ We directly generate a single image from text, unlike the original COLE ((i) tex
 poetry run python -m opencole.inference_launcher.text_to_image --pretrained_model_name_or_path <PRETRAINED_MODEL_NAME_OR_PATH> --detail_dir <DETAIL_DIR> --output_dir <OUTPUT_DIR>
 ```
 
-Note: if you only have UNet weights, which happens in fine-tuning SDXL on your own, please use `--unet_dir <UNET_DIR> --pretrained_model_name_or_path stabilityai/stable-diffusion-xl-base-1.0` instead of `--pretrained_model_name_or_path`.
+Note: if you only have UNet weights, which happens in fine-tuning SDXL on your own, please use `--finetuned_unet_dir <UNET_DIR> --pretrained_model_name_or_path stabilityai/stable-diffusion-xl-base-1.0` instead of `--pretrained_model_name_or_path`.
 
 ## TypographyLMM
 
