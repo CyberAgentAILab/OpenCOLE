@@ -68,8 +68,11 @@ def main(tester: "BaseRendererTester") -> None:
 
 class BaseRendererTester:
     """Basic interface for tester."""
-    def __init__(self) -> None:
-        pass
+    def __init__(self, hfds_name: str) -> None:
+        _, self.features = sample_example(hfds_name)
+        self.hfds_helper = hfds_helper_factory(
+            hfds_name=hfds_name, features=self.features
+        )
 
     def __call__(self, background: Image.Image, typography: Example) -> Image.Image:
         raise NotImplementedError
@@ -77,11 +80,7 @@ class BaseRendererTester:
 
 class RendererTester(BaseRendererTester):
     def __init__(self, hfds_name: str = "crello") -> None:
-        super().__init__()
-        _, self.features = sample_example(hfds_name)
-        self.hfds_helper = hfds_helper_factory(
-            hfds_name=hfds_name, features=self.features
-        )
+        super().__init__(hfds_name=hfds_name)
         self.renderer = ExampleRenderer(features=self.hfds_helper.renderer_features)
 
     def __call__(self, background: Image.Image, typography: Example) -> Image.Image:

@@ -38,6 +38,9 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--hfds_name", type=str, default="crello")
     parser.add_argument(
+        "--skip_showing_choices", type=str, nargs="*", default=["font"]
+    )
+    parser.add_argument(
         "--input_hfds",
         type=str,
         default="cyberagent/opencole",
@@ -118,6 +121,7 @@ def main() -> None:
         pydantic_object=get_layout_pydantic_model(
             schema=manager.schema,
             class_label_mappings=manager.class_label_mappings,
+            skip_showing_choices=args.skip_showing_choices,
         )
     )  # type: ignore
     logger.info(f"{manager.schema=}")

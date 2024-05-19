@@ -6,15 +6,14 @@ from pathlib import Path
 
 import torch
 from langchain.output_parsers import PydanticOutputParser
-from PIL import Image
-
 from layoutlib.hfds import hfds_helper_factory, sample_example
 from layoutlib.hfds.clustering import clustering_default_weight_path_factory
 from layoutlib.hfds.util import extract_class_label_mappings
 from layoutlib.manager import LayoutManager
 from layoutlib.schema import get_layout_pydantic_model
 from opencole.inference.tester import TypographyLMMTester
-from opencole.schema import DetailV1, Detail
+from opencole.schema import Detail, DetailV1
+from PIL import Image
 
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 logger = logging.getLogger(__name__)
@@ -28,6 +27,7 @@ def main(DetailClass: type[Detail]) -> None:
 
     parser.add_argument("--hfds_name", type=str, default="crello")
     parser.add_argument("--schema_name", type=str, default="typography_crello_default")
+    parser.add_argument("--skip_showing_choices", type=str, nargs="*", default=["font"])
     # I/O
     parser.add_argument(
         "--detail_dir",
@@ -50,7 +50,7 @@ def main(DetailClass: type[Detail]) -> None:
     )
     parser.add_argument("--load_in_4bit", action="store_true")
     parser.add_argument("--load_in_8bit", action="store_true")
-    parser.set_defaults(max_new_tokens=1024)
+    parser.set_defaults(max_new_tokens=2048)
     args = parser.parse_args()
     logger.info(f"{args=}")
 
@@ -69,6 +69,7 @@ def main(DetailClass: type[Detail]) -> None:
         pydantic_object=get_layout_pydantic_model(
             schema=layout_manager.schema,
             class_label_mappings=layout_manager.class_label_mappings,
+            skip_showing_choices=args.skip_showing_choices,
         )  # type: ignore
     )
     hfds_helper = hfds_helper_factory(hfds_name=args.hfds_name, features=features)
@@ -77,7 +78,7 @@ def main(DetailClass: type[Detail]) -> None:
         k: v
         for k, v in vars(args).items()
         if k
-        not in ["detail_dir", "image_dir", "output_dir", "hfds_name", "schema_name"]
+        not in ["detail_dir", "image_dir", "output_dir", "hfds_name", "schema_name", "skip_showing_choices"]
     }
     tester = TypographyLMMTester(
         layout_parser=layout_parser,
