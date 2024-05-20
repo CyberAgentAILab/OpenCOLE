@@ -118,6 +118,7 @@ def description_factory(key: str) -> str:
 def get_element_pydantic_model(
     schema: ElementSchema,
     class_label_mappings: dict[str, ds.ClassLabel] = {},
+    skip_showing_choices: list[str] = [],
 ) -> Element:  # type: ignore
     """
     Generate a pydantic class that is passed as pydantic_object to PydanticOutputParser.
@@ -130,10 +131,14 @@ def get_element_pydantic_model(
         class_label_mappings,
         schema.categorical_keys,
     )
+    assert all([key in class_label_mappings for key in skip_showing_choices]), (
+        class_label_mappings,
+        skip_showing_choices,
+    )
 
-    class_names_ignore_keys = [
-        "font",
-    ]  # TODO: generalize the rule
+    # class_names_ignore_keys = [
+    #     "font",
+    # ]  # TODO: generalize the rule
     pydantic_kwargs, validators = {}, {}
     for key in schema.attribute_order:
         description = description_factory(key)
@@ -144,12 +149,12 @@ def get_element_pydantic_model(
 
             # in case there are too many class names, we can avoid listing the names
             # TODO: should we always include ""?
-            if key not in class_names_ignore_keys:
+            if key in skip_showing_choices:
+                description += ""
+            else:
                 description += "choices: " + ", ".join(
                     [f'"{name}"' for name in class_names]
                 )
-            else:
-                description += ""
 
             validators[f"{key}_validator"] = validator(key, allow_reuse=True)(
                 partial(_is_categorical_key, class_names=class_names, key=key)
@@ -187,6 +192,7 @@ def get_element_pydantic_model(
 def get_layout_pydantic_model(
     schema: ElementSchema,
     class_label_mappings: dict[str, ds.ClassLabel] = {},
+    skip_showing_choices: list[str] = [],
 ) -> Layout:  # type: ignore
     """
     Dynamically generate a pydantic class for layout.
@@ -199,6 +205,7 @@ def get_layout_pydantic_model(
     Element = get_element_pydantic_model(
         schema=schema,
         class_label_mappings=class_label_mappings,
+        skip_showing_choices=skip_showing_choices,
     )
     return create_model("Layout", elements=(list[Element], []))  # type: ignore
 
