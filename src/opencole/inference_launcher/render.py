@@ -126,4 +126,4 @@ class RendererTester(BaseRendererTester):
 
 
 if __name__ == "__main__":
-    main(RendererTesterClass=RendererTester())
+    main(tester=RendererTester())
