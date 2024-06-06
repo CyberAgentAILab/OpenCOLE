@@ -1,0 +1,5 @@
+{
+    "hfds_name": "crello",
+    "schema_name": "typography_crello_default",
+    "skip_showing_choices": ["font"]
+}

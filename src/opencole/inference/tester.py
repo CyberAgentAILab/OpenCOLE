@@ -3,6 +3,7 @@ import json
 import logging
 import math
 import random
+import time
 from copy import deepcopy
 from typing import Any
 
@@ -16,9 +17,6 @@ from diffusers import (
 )
 from langchain.output_parsers import PydanticOutputParser
 from langchain_core.exceptions import OutputParserException
-from PIL import Image
-import time
-
 from layoutlib.hfds.base import BaseHFDSHelper
 from layoutlib.hfds.util import Example
 from layoutlib.manager import LayoutManager
@@ -29,8 +27,9 @@ from opencole.model.llava import (
     load_llava,
     padding_layout_transform,
 )
-from opencole.util import TYPOGRAPHYLMM_INSTRUCTION
 from opencole.schema import ChildOfDetail, DetailV1, _BaseModel
+from opencole.util import TYPOGRAPHYLMM_INSTRUCTION
+from PIL import Image
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +55,7 @@ class BaseTester:
         self._max_num_trials = max_num_trials
         self._chunk_num = chunk_num
         self._chunk_index = chunk_index
+
     @property
     def generator(self) -> torch.Generator:
         return self._generator
@@ -205,7 +205,8 @@ class BASET2ITester(BaseTester):
 class BASESDXLTester(BASET2ITester):
     def __init__(
         self,
-        unet_dir: str | None = None,
+        finetuned_unet_dir: str | None = None,  # for full fine-tuning
+        lora_weights_path: str | None = None,  # for lora fine-tuning
         pretrained_model_name_or_path: str = "stabilityai/stable-diffusion-xl-base-1.0",
         scheduler: str = "ddpm",
         use_compel: bool = True,
@@ -225,16 +226,17 @@ class BASESDXLTester(BASET2ITester):
             "torch_dtype": torch.bfloat16,
         }
 
-        # quantization_config = self.quantization_config(torch.bfloat16)
-        # if quantization_config is not None:
-        #     pipeline_kwargs["quantization_config"] = quantization_config
+        assert not (
+            finetuned_unet_dir is not None and lora_weights_path is not None
+        ), "Two models cannot be loaded at the same time"
 
-        if unet_dir is not None:
+        if finetuned_unet_dir is not None:
             pipeline_kwargs["unet"] = UNet2DConditionModel.from_pretrained(
-                unet_dir, torch_dtype=torch.bfloat16
+                finetuned_unet_dir, torch_dtype=torch.bfloat16
             )
-
         pipeline = StableDiffusionXLPipeline.from_pretrained(**pipeline_kwargs)
+        if lora_weights_path is not None:
+            pipeline.load_lora_weights(lora_weights_path)
 
         if scheduler == "ddpm":
             pipeline.scheduler = DDPMScheduler.from_config(pipeline.scheduler.config)
@@ -418,14 +420,6 @@ class TypographyLMMTester(BaseTransformersLMTester):
         self.format_instructions = self.layout_parser.get_format_instructions()
         self.instruction = f"{TYPOGRAPHYLMM_INSTRUCTION} {self.format_instructions}"
 
-    def get_text_input(self, detail: DetailV1) -> str:
-        texts = []
-        for heading in detail["headings"]:
-            for v in detail["headings"][heading]:
-                texts.append(v)
-        text_input = json.dumps(texts)
-        return text_input
-
     def __call__(self, background: Image.Image, detail: DetailV1) -> Example | None:
         conv: Conversation = deepcopy(self.conv)
         context = detail.serialize_tlmm_context()
@@ -493,7 +487,7 @@ class TypographyLMMTester(BaseTransformersLMTester):
             logger.warning("Fill the prediction by dummy objects")
             schema = self.layout_manager.schema
             elements = []
-            for text in json.loads(DetailV1.serialize_tlmm_input(detail)):
+            for text in json.loads(detail.serialize_tlmm_input(shuffle=True)):
                 element: dict[str, Any] = {}
                 for key in self.layout_manager.schema.attribute_order:
                     if key == "text":
@@ -525,7 +519,11 @@ class TypographyLMMTester(BaseTransformersLMTester):
 
 class LangChainTester(BaseTester):
     def __init__(
-        self, chain, pydantic_object: type[_BaseModel], sleep_sec: float = 1.0, **kwargs: Any
+        self,
+        chain,
+        pydantic_object: type[_BaseModel],
+        sleep_sec: float = 1.0,
+        **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
         self.chain = chain
@@ -556,4 +554,7 @@ class LangChainTester(BaseTester):
             )
             output = self.pydantic_object.get_mock()
 
+        return output
+        return output
+        return output
         return output
