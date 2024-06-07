@@ -97,7 +97,7 @@ def setup_model(
         model = AzureChatOpenAI(
             deployment_name=azure_openai_model_name,
             model_name=azure_openai_model_name,
-            openai_api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
+            openai_api_version=os.getenv("OPENAI_API_VERSION"),
         )  # type: ignore
     else:
         raise NotImplementedError("No model is specified.")

@@ -1,15 +1,14 @@
 import argparse
 import logging
-import os
 from pathlib import Path
 
+import torch
 import torch.nn.functional as F
 from PIL import Image
-from transformers import CLIPModel, CLIPProcessor
+from transformers import AutoModel, AutoProcessor
 
-from opencole.evaluation.clip import extract_features
+from opencole.evaluation.clip import DEVICE, extract_features
 
-logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 logger = logging.getLogger(__name__)
 
 
@@ -25,32 +24,32 @@ def main() -> None:
     parser.add_argument(
         "--clip_model",
         type=str,
-        default="openai/clip-vit-base-patch32",
+        default="google/siglip-so400m-patch14-384",
         help="image and text feature extractor",
     )
-    parser.add_argument("--batch_size", type=int, default=2)
+    parser.add_argument("--batch_size", type=int, default=32)
+    parser.add_argument("--first_n", type=int, default=None)
     args = parser.parse_args()
     logger.info(f"{args=}")
 
-    model = CLIPModel.from_pretrained(args.clip_model)
-    processor = CLIPProcessor.from_pretrained(args.clip_model)
+    device_cpu = torch.device("cpu")
 
-    files_A = list(Path(args.dir_A).glob(f"*.{args.ext_A}"))
-    if os.environ.get("LOGLEVEL", "INFO") == "DEBUG":
-        files_A = files_A[:5]
-    N = len(files_A)
+    model = AutoModel.from_pretrained(args.clip_model).to(DEVICE)
+    processor = AutoProcessor.from_pretrained(args.clip_model)
+
+    pairs = _get_url_pairs(args.dir_A, args.dir_B, args.ext_A, args.ext_B)
+    if args.first_n is not None:
+        pairs = pairs[: args.first_n]
 
     scores = []
-    for i in range(0, N, args.batch_size):
-        tmp_A, tmp_B = [], []
-        for j in range(i, min(i + args.batch_size, N)):
-            file_A = files_A[j]
-            file_B = Path(args.dir_B) / f"{file_A.stem}.{args.ext_B}"
-            tmp_A.append(_load(str(file_A)))
-            tmp_B.append(_load(str(file_B)))
-
-        features_A = extract_features(tmp_A, args.ext_A, model, processor)
-        features_B = extract_features(tmp_B, args.ext_B, model, processor)
+    for i in range(0, len(pairs), args.batch_size):
+        slice_ = slice(i, min(i + args.batch_size, len(pairs)))
+        features_A = extract_features(
+            [_load(str(p[0])) for p in pairs[slice_]], args.ext_A, model, processor
+        ).to(device_cpu)
+        features_B = extract_features(
+            [_load(str(p[1])) for p in pairs[slice_]], args.ext_B, model, processor
+        ).to(device_cpu)
 
         for j in range(len(features_A)):
             sim = F.cosine_similarity(features_A[j : j + 1], features_B[j : j + 1])
@@ -59,9 +58,25 @@ def main() -> None:
     print(sum(scores) / len(scores))
 
 
+def _get_url_pairs(
+    dir_A: str, dir_B: str, ext_A: str, ext_B: str
+) -> list[tuple[str, str]]:
+    """
+    Get pairs of urls from two directories.
+    """
+    files_A = list(Path(dir_A).glob(f"*.{ext_A}"))
+    files_B = set(list(Path(dir_B).glob(f"*.{ext_B}")))
+    pairs = []
+    for file_A in files_A:
+        file_B = Path(dir_B) / f"{file_A.stem}.{ext_B}"
+        if file_B in files_B:
+            pairs.append((str(file_A), str(file_B)))
+    return pairs
+
+
 def _load(name: str) -> Image.Image | str:
     if name.endswith("png"):
-        return Image.open(name)
+        return Image.open(name).convert("RGB")
     elif name.endswith("txt"):
         with open(name, "r") as f:
             return f.read()
