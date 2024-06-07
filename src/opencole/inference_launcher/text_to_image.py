@@ -1,13 +1,11 @@
 import argparse
 import json
 import logging
-import os
 from pathlib import Path
 
 from opencole.inference.tester import T2ITester
-from opencole.schema import DetailV1, Detail
+from opencole.schema import Detail, DetailV1
 
-logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 logger = logging.getLogger(__name__)
 
 
@@ -26,7 +24,9 @@ def main(DetailClass: type[Detail]):
         type=str,
         help="Path to the fine-tuned UNet model for SDXL",
     )
-    parser.add_argument("--lora_weights_path", type=str, help="Path to the LoRA weights for SDXL")
+    parser.add_argument(
+        "--lora_weights_path", type=str, help="Path to the LoRA weights for SDXL"
+    )
     # I/O
     parser.add_argument("--detail_dir", type=str, required=True)
     parser.add_argument("--output_dir", type=str, required=True)

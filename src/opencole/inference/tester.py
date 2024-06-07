@@ -17,6 +17,8 @@ from diffusers import (
 )
 from langchain.output_parsers import PydanticOutputParser
 from langchain_core.exceptions import OutputParserException
+from PIL import Image
+
 from layoutlib.hfds.base import BaseHFDSHelper
 from layoutlib.hfds.util import Example
 from layoutlib.manager import LayoutManager
@@ -29,7 +31,6 @@ from opencole.model.llava import (
 )
 from opencole.schema import ChildOfDetail, DetailV1, _BaseModel
 from opencole.util import TYPOGRAPHYLMM_INSTRUCTION
-from PIL import Image
 
 logger = logging.getLogger(__name__)
 
@@ -503,6 +504,12 @@ class TypographyLMMTester(BaseTransformersLMTester):
                 elements.append(element)
             layout = self.layout_parser.pydantic_object(elements=elements)
 
+        if len(layout.elements) == 0:
+            logger.warning(
+                "No element is generated, probably because there is no text to be placed."
+            )
+            return None
+
         canvas_width, canvas_height = background.size
         layout_hfds = self.layout_manager.layout_instance_to_hfds(layout)
         layout_hfds = self.hfds_helper.denormalize(
@@ -554,7 +561,4 @@ class LangChainTester(BaseTester):
             )
             output = self.pydantic_object.get_mock()
 
-        return output
-        return output
-        return output
         return output
