@@ -14,10 +14,6 @@ logger = logging.getLogger(__name__)
 
 
 class ExampleRenderer(object):
-    """
-    Render extracted example for VistaCreate dataset.
-    """
-
     def __init__(self, features: datasets.Features, fonts_path: Optional[str] = None):
         self.features = features
         self.font_manager = FontManager(fonts_path or self._fetch_fonts_from_hub())
