@@ -1,5 +1,5 @@
 <div align="center">
-<h1> OpenCOLE: Towards Reproducible Automatic Graphic Design Generation </h3>
+<h1> <a href="https://arxiv.org/abs/2406.08232">OpenCOLE: Towards Reproducible Automatic Graphic Design Generation </a> </h1>
 
 <h4 align="center">
     <a href="https://naoto0804.github.io/">Naoto Inoue</a>&emsp;
