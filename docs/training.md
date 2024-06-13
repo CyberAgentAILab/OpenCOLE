@@ -1,6 +1,6 @@
 # Overview
 
-We decide not to integrate the training code for each part due to high maintanance cost. Please refer to the original repositories. However, we provide a set of scripts to convert the OpenCOLE dataset into some dataset formats that are ready to use for the following models.
+We decide not to integrate the training code for each part due to high maintenance cost. Please refer to the original repositories. However, we provide a set of scripts to convert the OpenCOLE dataset into some dataset formats that are ready to use for the following models.
 
 - text-to-image: [SimpleTuner](https://github.com/bghira/SimpleTuner)
 - typographylmm: [LLaVA1.5](https://github.com/haotian-liu/LLaVA)
