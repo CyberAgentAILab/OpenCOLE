@@ -10,7 +10,7 @@ import pandas as pd
 from langchain.output_parsers import PydanticOutputParser
 from langchain_core.exceptions import OutputParserException
 from langchain_core.pydantic_v1 import BaseModel, validator
-from openai import AzureOpenAI
+from openai import AzureOpenAI, OpenAI
 from PIL import Image, UnidentifiedImageError
 
 MAX_N_RETRY = 10
@@ -41,9 +41,12 @@ def main() -> None:
     if not output_dir.exists():
         output_dir.mkdir(parents=True, exist_ok=True)
 
-    client = AzureOpenAI(
-        api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-        api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
+    # client = AzureOpenAI(
+    #     api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+    #     api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
+    # )
+    client = OpenAI(
+        api_key=os.getenv("OPENAI_API_KEY"),
     )
     parser = PydanticOutputParser(pydantic_object=Result)
 
