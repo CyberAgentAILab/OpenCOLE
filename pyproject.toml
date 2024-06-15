@@ -19,6 +19,7 @@ torchvision = [
   {version = "^0.17.1+cu121", platform = "linux", source = "torch_cu121"},
 ]
 langchain = "*"
+langchain_community = "*"
 bitsandbytes = "*"
 protobuf = "*"
 peft = "*"
