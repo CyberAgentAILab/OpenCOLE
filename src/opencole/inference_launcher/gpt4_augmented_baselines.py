@@ -12,7 +12,7 @@ import torch
 from diffusers import DiffusionPipeline
 from PIL import Image
 
-from opencole.inference.tester import BASESDXLTester, BASET2ITester
+from opencole.inference.tester import BASESD3Tester, BASESDXLTester, BASET2ITester
 from opencole.inference.util import TestInput, load_cole_data
 
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
@@ -54,6 +54,16 @@ def main() -> None:
 
 
 class SDXLTester(BASESDXLTester):
+    def __init__(self, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+
+    def __call__(self, prompt: str) -> Image.Image:
+        width, height = self._size_sampler()
+        sampling_kwargs = {"width": width, "height": height, **self.sampling_kwargs}
+        return self.sample(prompt, **sampling_kwargs)
+
+
+class SD3Tester(BASESD3Tester):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
 
@@ -187,6 +197,7 @@ class DeepFloydTester(BASET2ITester):
 TESTER_MAPPING = {
     "deepfloyd": DeepFloydTester,
     "sdxl": SDXLTester,
+    "sd3": SD3Tester,
     "dalle3": DALLE3Tester,
 }
 
