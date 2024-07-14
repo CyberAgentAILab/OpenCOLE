@@ -12,6 +12,7 @@ from compel import Compel, ReturnedEmbeddingsType
 from diffusers import (
     DDPMScheduler,
     DPMSolverMultistepScheduler,
+    StableDiffusion3Pipeline,
     StableDiffusionXLPipeline,
     UNet2DConditionModel,
 )
@@ -291,6 +292,50 @@ class BASESDXLTester(BASET2ITester):
                 ).images[0]
             else:
                 image = self._pipeline(prompt=prompt, **kwargs).images[0]
+        return image
+
+    @property
+    def sampling_kwargs(self) -> dict[str, Any]:
+        return {
+            "guidance_scale": self._guidance_scale,
+            "num_inference_steps": self._num_inference_steps,
+            "generator": self.generator,
+        }
+
+
+class BASESD3Tester(BASET2ITester):
+    def __init__(
+        self,
+        pretrained_model_name_or_path: str = "stabilityai/stable-diffusion-3-medium-diffusers",
+        use_compel: bool = True,
+        use_negative_prompts: bool = True,
+        guidance_scale: float = 7.5,
+        num_inference_steps: int = 30,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(**kwargs)
+        self._use_compel = use_compel
+        self._guidance_scale = guidance_scale
+        self._num_inference_steps = num_inference_steps
+        self._use_negative_prompts = use_negative_prompts
+
+        pipeline_kwargs = {
+            "pretrained_model_name_or_path": pretrained_model_name_or_path,
+            "torch_dtype": torch.bfloat16,
+        }
+
+        pipeline = StableDiffusion3Pipeline.from_pretrained(**pipeline_kwargs)
+        pipeline.to("cuda")
+
+        self._pipeline = pipeline
+
+    def sample(self, prompt: str, **kwargs: Any) -> Image.Image:
+        if self._use_negative_prompts:
+            image = self._pipeline(
+                prompt=prompt, negative_prompt=NEGATIVE, **kwargs
+            ).images[0]
+        else:
+            image = self._pipeline(prompt=prompt, **kwargs).images[0]
         return image
 
     @property
