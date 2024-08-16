@@ -12,6 +12,7 @@ from compel import Compel, ReturnedEmbeddingsType
 from diffusers import (
     DDPMScheduler,
     DPMSolverMultistepScheduler,
+    FluxPipeline,
     StableDiffusion3Pipeline,
     StableDiffusionXLPipeline,
     UNet2DConditionModel,
@@ -30,7 +31,7 @@ from opencole.model.llava import (
     load_llava,
     padding_layout_transform,
 )
-from opencole.schema import ChildOfDetail, DetailV1, _BaseModel
+from opencole.schema import DetailV1, _BaseModel
 from opencole.util import TYPOGRAPHYLMM_INSTRUCTION
 
 logger = logging.getLogger(__name__)
@@ -170,6 +171,8 @@ class BaseTransformersLMTester(BaseTester):
 
 
 class BASET2ITester(BaseTester):
+    # base class for all text-to-image models (e.g., proprietary models, diffusers, etc.)
+    # just handles stuffs around output image size
     def __init__(
         self,
         image_type: str = "square",
@@ -184,6 +187,7 @@ class BASET2ITester(BaseTester):
             resolution=resolution,
             resolution_type=resolution_type,
         )
+        self._sampling_kwargs = {}
 
     @classmethod
     def register_args(cls, parser: argparse.ArgumentParser) -> None:
@@ -196,15 +200,22 @@ class BASET2ITester(BaseTester):
             "--resolution_type", type=str, default="area", choices=["area", "pixel"]
         )
 
-    def __call__(self, *args: Any, **kwds: Any) -> Any:
-        raise NotImplementedError
+    # def __call__(self, prompt: str) -> Image.Image:
+    # default process, override if necessary
+    # width, height = self.size_sampler()
+    # sampling_kwargs = {"width": width, "height": height, **self.sampling_kwargs}
+    # return self.sample(prompt, **sampling_kwargs)
 
     @property
     def size_sampler(self) -> "SizeSampler":
         return self._size_sampler
 
+    @property
+    def sampling_kwargs(self) -> dict[str, Any]:
+        return self._sampling_kwargs
 
-class BASESDXLTester(BASET2ITester):
+
+class SDXLTester(BASET2ITester):
     def __init__(
         self,
         finetuned_unet_dir: str | None = None,  # for full fine-tuning
@@ -219,9 +230,11 @@ class BASESDXLTester(BASET2ITester):
     ) -> None:
         super().__init__(**kwargs)
         self._use_compel = use_compel
-        self._guidance_scale = guidance_scale
-        self._num_inference_steps = num_inference_steps
         self._use_negative_prompts = use_negative_prompts
+
+        self._sampling_kwargs["guidance_scale"] = guidance_scale
+        self._sampling_kwargs["num_inference_steps"] = num_inference_steps
+        self._sampling_kwargs["generator"] = self.generator
 
         pipeline_kwargs = {
             "pretrained_model_name_or_path": pretrained_model_name_or_path,
@@ -268,7 +281,9 @@ class BASESDXLTester(BASET2ITester):
         if self._use_compel and self._use_negative_prompts:
             self._negative_conditioning, self._negative_pooled = compel(NEGATIVE)  # type: ignore
 
-    def sample(self, prompt: str, **kwargs: Any) -> Image.Image:
+    def __call__(self, prompt: str) -> Image.Image:
+        kwargs = {**self.size_sampler(), **self.sampling_kwargs}
+
         if self._use_compel:
             conditioning, pooled = self._compel(prompt)  # type: ignore
             if self._use_negative_prompts:
@@ -294,16 +309,8 @@ class BASESDXLTester(BASET2ITester):
                 image = self._pipeline(prompt=prompt, **kwargs).images[0]
         return image
 
-    @property
-    def sampling_kwargs(self) -> dict[str, Any]:
-        return {
-            "guidance_scale": self._guidance_scale,
-            "num_inference_steps": self._num_inference_steps,
-            "generator": self.generator,
-        }
 
-
-class BASESD3Tester(BASET2ITester):
+class SD3Tester(BASET2ITester):
     def __init__(
         self,
         pretrained_model_name_or_path: str = "stabilityai/stable-diffusion-3-medium-diffusers",
@@ -315,9 +322,11 @@ class BASESD3Tester(BASET2ITester):
     ) -> None:
         super().__init__(**kwargs)
         self._use_compel = use_compel
-        self._guidance_scale = guidance_scale
-        self._num_inference_steps = num_inference_steps
         self._use_negative_prompts = use_negative_prompts
+
+        self._sampling_kwargs["guidance_scale"] = guidance_scale
+        self._sampling_kwargs["num_inference_steps"] = num_inference_steps
+        self._sampling_kwargs["generator"] = self.generator
 
         pipeline_kwargs = {
             "pretrained_model_name_or_path": pretrained_model_name_or_path,
@@ -329,7 +338,9 @@ class BASESD3Tester(BASET2ITester):
 
         self._pipeline = pipeline
 
-    def sample(self, prompt: str, **kwargs: Any) -> Image.Image:
+    def __call__(self, prompt: str) -> Image.Image:
+        kwargs = {**self.size_sampler(), **self.sampling_kwargs}
+
         if self._use_negative_prompts:
             image = self._pipeline(
                 prompt=prompt, negative_prompt=NEGATIVE, **kwargs
@@ -338,24 +349,49 @@ class BASESD3Tester(BASET2ITester):
             image = self._pipeline(prompt=prompt, **kwargs).images[0]
         return image
 
-    @property
-    def sampling_kwargs(self) -> dict[str, Any]:
-        return {
-            "guidance_scale": self._guidance_scale,
-            "num_inference_steps": self._num_inference_steps,
-            "generator": self.generator,
-        }
 
-
-class T2ITester(BASESDXLTester):
-    def __init__(self, **kwargs: Any) -> None:
+class FluxTester(BASET2ITester):
+    # https://huggingface.co/docs/diffusers/main/en/api/pipelines/flux
+    def __init__(
+        self,
+        pretrained_model_name_or_path: str,
+        enable_model_cpu_offload: bool = True,
+        run_on_low_vram_gpus: bool = True,  # to run on low vram GPUs (i.e. between 4 and 32 GB VRAM)
+        **kwargs: Any,
+    ) -> None:
         super().__init__(**kwargs)
 
-    def __call__(self, detail: ChildOfDetail) -> Image.Image:
-        prompt = detail.serialize_t2i_input()
-        width, height = self._size_sampler()
-        sampling_kwargs = {"width": width, "height": height, **self.sampling_kwargs}
-        return self.sample(prompt, **sampling_kwargs)
+        if "schnell" in pretrained_model_name_or_path:
+            # https://huggingface.co/docs/diffusers/main/en/api/pipelines/flux#timestep-distilled
+            self._sampling_kwargs["guidance_scale"] = 0.0
+            self._sampling_kwargs["num_inference_steps"] = 4
+            self._sampling_kwargs["max_sequence_length"] = 256
+        elif "dev" in pretrained_model_name_or_path:
+            # https://huggingface.co/docs/diffusers/main/en/api/pipelines/flux#guidance-distilled
+            self._sampling_kwargs["guidance_scale"] = 7.5
+            self._sampling_kwargs["num_inference_steps"] = 30
+        else:
+            raise NotImplementedError
+
+        pipeline = FluxPipeline.from_pretrained(
+            pretrained_model_name_or_path, torch_dtype=torch.bfloat16
+        )
+        if run_on_low_vram_gpus:
+            pipeline.enable_sequential_cpu_offload()
+            pipeline.vae.enable_slicing()
+            pipeline.vae.enable_tiling()
+        else:
+            if enable_model_cpu_offload:
+                pipeline.enable_model_cpu_offload()
+        self._pipeline = pipeline
+
+    def __call__(self, prompt: str) -> Image.Image:
+        kwargs = {**self.size_sampler(), **self.sampling_kwargs}
+        # note:
+        # - negative prompts are not supported in Flux
+        # - longer max_sequence_length allows us to avoid using compel
+        image = self._pipeline(prompt=prompt, **kwargs).images[0]
+        return image
 
 
 class SizeSampler:
@@ -395,12 +431,12 @@ class SizeSampler:
         self._resolution = resolution
         self._resolution_type = resolution_type
 
-    def __call__(self) -> tuple[int, int]:
+    def __call__(self) -> dict[str, int]:
         aspect_ratio = random.choices(self._aspect_ratios, weights=self._weights, k=1)[
             0
         ]
         W, H = SizeSampler.calculate_size_by_pixel_area(aspect_ratio, self._resolution)
-        return W, H
+        return {"width": W, "height": H}
 
     @staticmethod
     def calculate_size_by_pixel_area(

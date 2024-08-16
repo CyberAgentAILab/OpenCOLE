@@ -2,6 +2,7 @@ import argparse
 import json
 import logging
 import os
+from functools import partial
 from io import BytesIO
 from pathlib import Path
 from typing import Any
@@ -12,7 +13,7 @@ import torch
 from diffusers import DiffusionPipeline
 from PIL import Image
 
-from opencole.inference.tester import BASESD3Tester, BASESDXLTester, BASET2ITester
+from opencole.inference.tester import BASET2ITester, FluxTester, SD3Tester, SDXLTester
 from opencole.inference.util import TestInput, load_cole_data
 
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
@@ -25,6 +26,7 @@ def main() -> None:
 
     parser.add_argument("--tester", type=str, choices=tester_names(), required=True)
     parser.add_argument("--output_dir", type=str, required=True)
+    parser.add_argument("--first_n", type=int, default=None)
     args = parser.parse_args()
     logger.info(f"{args=}")
 
@@ -39,6 +41,9 @@ def main() -> None:
     )
     inputs: list[TestInput] = load_cole_data(split_name="designerintention_v1")
 
+    if args.first_n is not None:
+        inputs = inputs[: args.first_n]
+
     for i, input_ in enumerate(inputs):
         output_path = output_dir / f"{input_.id}.png"
         if output_path.exists():
@@ -48,29 +53,6 @@ def main() -> None:
         logger.info(f"{input_.id=} {input_.gpt_aug_prompt=}")
         output = tester(input_.gpt_aug_prompt)
         output.save(str(output_path))
-
-        if os.environ.get("LOGLEVEL", "DEBUG") is not None and i >= 9:
-            break
-
-
-class SDXLTester(BASESDXLTester):
-    def __init__(self, **kwargs: Any) -> None:
-        super().__init__(**kwargs)
-
-    def __call__(self, prompt: str) -> Image.Image:
-        width, height = self._size_sampler()
-        sampling_kwargs = {"width": width, "height": height, **self.sampling_kwargs}
-        return self.sample(prompt, **sampling_kwargs)
-
-
-class SD3Tester(BASESD3Tester):
-    def __init__(self, **kwargs: Any) -> None:
-        super().__init__(**kwargs)
-
-    def __call__(self, prompt: str) -> Image.Image:
-        width, height = self._size_sampler()
-        sampling_kwargs = {"width": width, "height": height, **self.sampling_kwargs}
-        return self.sample(prompt, **sampling_kwargs)
 
 
 class DALLE3Tester(BASET2ITester):
@@ -199,6 +181,12 @@ TESTER_MAPPING = {
     "sdxl": SDXLTester,
     "sd3": SD3Tester,
     "dalle3": DALLE3Tester,
+    "flux1_dev": partial(
+        FluxTester, pretrained_model_name_or_path="black-forest-labs/FLUX.1-dev"
+    ),
+    "flux1_schnell": partial(
+        FluxTester, pretrained_model_name_or_path="black-forest-labs/FLUX.1-schnell"
+    ),
 }
 
 

@@ -112,8 +112,15 @@ def main(DetailClass: type[Detail]) -> None:
 
     for detail_path, image_path in detail_image_pairs:
         image = Image.open(str(image_path))
-        with detail_path.open("r") as fp:
-            detail = DetailClass(**json.load(fp))
+        try:
+            with detail_path.open("r") as fp:
+                detail = DetailClass(**json.load(fp))
+        except UnicodeDecodeError:
+            from IPython import embed
+
+            embed()
+            exit()
+
         output_path = output_dir / f"{detail_path.stem}.json"
         if output_path.exists():
             logger.info(f"Skipping {detail_path.stem} since it already exists.")
