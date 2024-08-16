@@ -1,10 +1,14 @@
 import argparse
 import json
 import math
+import os
 import random
 from functools import partial
+from io import BytesIO
 from typing import Any
 
+import openai
+import requests
 import torch
 from compel import Compel, ReturnedEmbeddingsType
 from diffusers import (
@@ -22,6 +26,78 @@ from PIL import Image
 from opencole.inference.tester.base import BaseTester
 
 NEGATIVE = "deep fried watermark cropped out-of-frame low quality low res oorly drawn bad anatomy wrong anatomy extra limb missing limb floating limbs (mutated hands and fingers)1.4 disconnected limbs mutation mutated ugly disgusting blurry amputation synthetic rendering"
+
+
+class SizeSampler:
+    aspect_ratios: list[float] = [
+        1 / 1,
+        16 / 9,
+        9 / 16,
+    ]
+
+    def __init__(
+        self,
+        image_type: str = "arbitrary",
+        resolution: float = 1.0,
+        resolution_type: str = "area",
+        weights: list[float] | None = None,
+    ) -> None:
+        assert image_type in ["arbitrary", "square"], image_type
+        assert resolution_type in ["area", "pixel"], resolution_type
+        assert resolution > 0.0, resolution
+
+        if weights is not None:
+            assert isinstance(weights, list) and len(weights) == len(
+                SizeSampler.aspect_ratios
+            ), weights
+        self._weights = weights
+
+        if image_type == "arbitrary":
+            self._aspect_ratios = SizeSampler.aspect_ratios
+        elif image_type == "square":
+            self._aspect_ratios = [
+                1 / 1,
+            ]
+        else:
+            raise NotImplementedError
+        self._image_type = image_type
+
+        self._resolution = resolution
+        self._resolution_type = resolution_type
+
+    def __call__(self) -> dict[str, int]:
+        aspect_ratio = random.choices(self._aspect_ratios, weights=self._weights, k=1)[
+            0
+        ]
+        W, H = SizeSampler.calculate_size_by_pixel_area(aspect_ratio, self._resolution)
+        return {"width": W, "height": H}
+
+    @staticmethod
+    def calculate_size_by_pixel_area(
+        aspect_ratio: float, megapixels: float
+    ) -> tuple[int, int]:
+        """
+        https://github.com/bghira/SimpleTuner/blob/main/helpers/multiaspect/image.py#L359-L371
+        """
+        assert aspect_ratio > 0.0, aspect_ratio
+        pixels = int(megapixels * (1024**2))
+
+        W_new = int(round(math.sqrt(pixels * aspect_ratio)))
+        H_new = int(round(math.sqrt(pixels / aspect_ratio)))
+
+        W_new = SizeSampler.round_to_nearest_multiple(W_new, 64)
+        H_new = SizeSampler.round_to_nearest_multiple(H_new, 64)
+
+        return W_new, H_new
+
+    @staticmethod
+    def round_to_nearest_multiple(value: int, multiple: int) -> int:
+        """
+        Round a value to the nearest multiple.
+        https://github.com/bghira/SimpleTuner/blob/main/helpers/multiaspect/image.py#L264-L268
+        """
+        rounded = round(value / multiple) * multiple
+        return max(rounded, multiple)  # Ensure it's at least the value of 'multiple'
 
 
 class BASET2ITester(BaseTester):
@@ -61,7 +137,7 @@ class BASET2ITester(BaseTester):
     # return self.sample(prompt, **sampling_kwargs)
 
     @property
-    def size_sampler(self) -> "SizeSampler":
+    def size_sampler(self) -> SizeSampler:
         return self._size_sampler
 
     @property
@@ -253,10 +329,9 @@ class AuraFlowTester(BASET2ITester):
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
-
         self._pipeline = AuraFlowPipeline.from_pretrained(
             "fal/AuraFlow", torch_dtype=torch.float16
-        )
+        ).to("cuda")
 
         # note: following default parameters in the doc:
         self._sampling_kwargs["guidance_scale"] = 3.5
@@ -266,78 +341,6 @@ class AuraFlowTester(BASET2ITester):
         kwargs = {**self.size_sampler(), **self.sampling_kwargs}
         image = self._pipeline(prompt=prompt, **kwargs).images[0]
         return image
-
-
-class SizeSampler:
-    aspect_ratios: list[float] = [
-        1 / 1,
-        16 / 9,
-        9 / 16,
-    ]
-
-    def __init__(
-        self,
-        image_type: str = "arbitrary",
-        resolution: float = 1.0,
-        resolution_type: str = "area",
-        weights: list[float] | None = None,
-    ) -> None:
-        assert image_type in ["arbitrary", "square"], image_type
-        assert resolution_type in ["area", "pixel"], resolution_type
-        assert resolution > 0.0, resolution
-
-        if weights is not None:
-            assert isinstance(weights, list) and len(weights) == len(
-                SizeSampler.aspect_ratios
-            ), weights
-        self._weights = weights
-
-        if image_type == "arbitrary":
-            self._aspect_ratios = SizeSampler.aspect_ratios
-        elif image_type == "square":
-            self._aspect_ratios = [
-                1 / 1,
-            ]
-        else:
-            raise NotImplementedError
-        self._image_type = image_type
-
-        self._resolution = resolution
-        self._resolution_type = resolution_type
-
-    def __call__(self) -> dict[str, int]:
-        aspect_ratio = random.choices(self._aspect_ratios, weights=self._weights, k=1)[
-            0
-        ]
-        W, H = SizeSampler.calculate_size_by_pixel_area(aspect_ratio, self._resolution)
-        return {"width": W, "height": H}
-
-    @staticmethod
-    def calculate_size_by_pixel_area(
-        aspect_ratio: float, megapixels: float
-    ) -> tuple[int, int]:
-        """
-        https://github.com/bghira/SimpleTuner/blob/main/helpers/multiaspect/image.py#L359-L371
-        """
-        assert aspect_ratio > 0.0, aspect_ratio
-        pixels = int(megapixels * (1024**2))
-
-        W_new = int(round(math.sqrt(pixels * aspect_ratio)))
-        H_new = int(round(math.sqrt(pixels / aspect_ratio)))
-
-        W_new = SizeSampler.round_to_nearest_multiple(W_new, 64)
-        H_new = SizeSampler.round_to_nearest_multiple(H_new, 64)
-
-        return W_new, H_new
-
-    @staticmethod
-    def round_to_nearest_multiple(value: int, multiple: int) -> int:
-        """
-        Round a value to the nearest multiple.
-        https://github.com/bghira/SimpleTuner/blob/main/helpers/multiaspect/image.py#L264-L268
-        """
-        rounded = round(value / multiple) * multiple
-        return max(rounded, multiple)  # Ensure it's at least the value of 'multiple'
 
 
 class DALLE3Tester(BASET2ITester):
@@ -461,7 +464,7 @@ class DeepFloydTester(BASET2ITester):
         return image
 
 
-TESTER_MAPPING = {
+T2I_TESTER_MAPPING = {
     "deepfloyd": DeepFloydTester,
     "sdxl": SDXLTester,
     "sd3": SD3Tester,
@@ -476,9 +479,9 @@ TESTER_MAPPING = {
 }
 
 
-def tester_factory(name: str) -> type[BASET2ITester]:
-    return TESTER_MAPPING[name]
+def t2itester_factory(name: str) -> type[BASET2ITester]:
+    return T2I_TESTER_MAPPING[name]
 
 
-def tester_names() -> list[str]:
-    return list(TESTER_MAPPING.keys())
+def t2i_tester_names() -> list[str]:
+    return list(T2I_TESTER_MAPPING.keys())

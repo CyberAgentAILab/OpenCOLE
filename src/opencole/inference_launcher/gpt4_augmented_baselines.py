@@ -5,8 +5,8 @@ from pathlib import Path
 
 from opencole.inference.tester.text2image import (
     BASET2ITester,
-    tester_factory,
-    tester_names,
+    t2i_tester_names,
+    t2itester_factory,
 )
 from opencole.inference.util import TestInput, load_cole_data
 
@@ -18,7 +18,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     BASET2ITester.register_args(parser)
 
-    parser.add_argument("--tester", type=str, choices=tester_names(), required=True)
+    parser.add_argument("--tester", type=str, choices=t2i_tester_names(), required=True)
     parser.add_argument("--output_dir", type=str, required=True)
     parser.add_argument("--first_n", type=int, default=None)
     args = parser.parse_args()
@@ -29,7 +29,7 @@ def main() -> None:
         output_dir.mkdir()
 
     # get tester-specific arguments and instantiate the tester
-    tester_class = tester_factory(args.tester)
+    tester_class = t2itester_factory(args.tester)
     tester = tester_class(
         **{
             k: v
