@@ -49,7 +49,7 @@ def main(tester: "BaseRendererTester") -> None:
     if not output_dir.exists():
         output_dir.mkdir(parents=True, exist_ok=True)
 
-    for (typography_path, image_path) in typography_image_pairs:
+    for typography_path, image_path in typography_image_pairs:
         stem = typography_path.stem
         image = Image.open(str(image_path))
         with typography_path.open("r") as fp:
@@ -67,6 +67,7 @@ def main(tester: "BaseRendererTester") -> None:
 
 class BaseRendererTester:
     """Basic interface for tester."""
+
     def __init__(self, hfds_name: str) -> None:
         _, self.features = sample_example(hfds_name)
         self.hfds_helper = hfds_helper_factory(

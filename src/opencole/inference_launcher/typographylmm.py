@@ -13,7 +13,7 @@ from layoutlib.hfds.clustering import clustering_default_weight_path_factory
 from layoutlib.hfds.util import extract_class_label_mappings
 from layoutlib.manager import LayoutManager
 from layoutlib.schema import get_layout_pydantic_model
-from opencole.inference.tester import TypographyLMMTester
+from opencole.inference.tester.llm import TypographyLMMTester
 from opencole.schema import Detail, DetailV1
 
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
@@ -112,8 +112,15 @@ def main(DetailClass: type[Detail]) -> None:
 
     for detail_path, image_path in detail_image_pairs:
         image = Image.open(str(image_path))
-        with detail_path.open("r") as fp:
-            detail = DetailClass(**json.load(fp))
+        try:
+            with detail_path.open("r") as fp:
+                detail = DetailClass(**json.load(fp))
+        except UnicodeDecodeError:
+            from IPython import embed
+
+            embed()
+            exit()
+
         output_path = output_dir / f"{detail_path.stem}.json"
         if output_path.exists():
             logger.info(f"Skipping {detail_path.stem} since it already exists.")

@@ -3,7 +3,7 @@ import json
 import logging
 from pathlib import Path
 
-from opencole.inference.tester import T2ITester
+from opencole.inference.tester.text2image import T2ITester
 from opencole.schema import Detail, DetailV1
 
 logger = logging.getLogger(__name__)
