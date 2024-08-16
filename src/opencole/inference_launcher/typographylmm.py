@@ -13,7 +13,7 @@ from layoutlib.hfds.clustering import clustering_default_weight_path_factory
 from layoutlib.hfds.util import extract_class_label_mappings
 from layoutlib.manager import LayoutManager
 from layoutlib.schema import get_layout_pydantic_model
-from opencole.inference.tester import TypographyLMMTester
+from opencole.inference.tester.llm import TypographyLMMTester
 from opencole.schema import Detail, DetailV1
 
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))

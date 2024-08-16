@@ -9,8 +9,8 @@ import pandas as pd
 from langchain.output_parsers import PydanticOutputParser
 
 from opencole.inference.langchain_helper import Example, setup_model, setup_prompt
+from opencole.inference.tester.llm import LangChainTester
 from opencole.inference.util import load_cole_data
-from opencole.inference.tester import LangChainTester
 from opencole.schema import DetailV1, IntentionV1
 
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
