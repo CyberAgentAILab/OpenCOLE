@@ -130,12 +130,6 @@ class BASET2ITester(BaseTester):
             "--resolution_type", type=str, default="area", choices=["area", "pixel"]
         )
 
-    # def __call__(self, prompt: str) -> Image.Image:
-    # default process, override if necessary
-    # width, height = self.size_sampler()
-    # sampling_kwargs = {"width": width, "height": height, **self.sampling_kwargs}
-    # return self.sample(prompt, **sampling_kwargs)
-
     @property
     def size_sampler(self) -> SizeSampler:
         return self._size_sampler
