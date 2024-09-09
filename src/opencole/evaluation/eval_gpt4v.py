@@ -17,20 +17,6 @@ MAX_N_RETRY = 10
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 logger = logging.getLogger(__name__)
 
-QUALITY_ASSURANCE_PROMPT = (
-    "You are an autonomous AI Assistant who aids designers by providing insightful, objective, and constructive critiques of graphic design projects. "
-    + "Your goals are: Deliver comprehensive and unbiased evaluations of graphic designs based on established design principles and industry standards. "
-    + "You are asked to choose the design that best matches a given intention. "
-    + "Identify potential areas for improvement and suggest actionable feedback to enhance the overall aesthetic and effectiveness of the designs. "
-    + "Maintain a consistent and high standard of critique. "
-    + "Utilize coordinate information for data description relative to the upper left corner of the image, with the upper left corner serving as the origin, the right as the positive direction, and the downward as the positive direction. "
-    + "Please abide by the following rules: Strive to answer as objectively as possible. "
-    + "Grade seriously."
-    + "If the output is too long, it will be truncated. "
-    + "Only respond in JSON format, no other information. "
-    + 'Example of output for designs that most match a given intention: {"best_design": "b", explanation: "(Please explain the reason of choice.)"}\n'
-)
-
 
 def main() -> None:
     """
@@ -85,25 +71,11 @@ def main() -> None:
                         {
                             "role": "user",
                             "content": [
-                                {
-                                    "type": "text",
-                                    "text": "Which of the following images better matches the intention?",
-                                },
-                                {"type": "text", "text": "(a)"},
+                                {"type": "text", "text": "Grade this picture."},
                                 {
                                     "type": "image_url",
                                     "image_url": {
                                         "url": local_image_to_data_url(str(image_path)),
-                                        "detail": "low",
-                                    },
-                                },
-                                {"type": "text", "text": "(b)"},
-                                {
-                                    "type": "image_url",
-                                    "image_url": {
-                                        "url": local_image_to_data_url(
-                                            str(image_path)
-                                        ),
                                         "detail": "low",
                                     },
                                 },
@@ -191,6 +163,35 @@ def local_image_to_data_url(image_path: str) -> str:
 
     # Construct the data URL
     return f"data:{mime_type};base64,{base64_encoded_data}"
+
+
+QUALITY_ASSURANCE_PROMPT = (
+    "You are an autonomous AI Assistant who aids designers by providing insightful, objective, and constructive critiques of graphic design projects. "
+    "Your goals are: Deliver comprehensive and unbiased evaluations of graphic designs based on established design principles and industry standards. "
+    "Identify potential areas for improvement and suggest actionable feedback to enhance the overall aesthetic and effectiveness of the designs. "
+    "Maintain a consistent and high standard of critique. "
+    "Utilize coordinate information for data description relative to the upper left corner of the image, with the upper left corner serving as the origin, the right as the positive direction, and the downward as the positive direction. "
+    "Please abide by the following rules: Strive to score as objectively as possible. "
+    "Grade seriously. A flawless design can earn 10 points, a mediocre design can only earn 7 points, a design with obvious shortcomings can only earn 4 points, and a very poor design can only earn 1-2 points. "
+    "Keep your reasoning concise when rating, and describe it as briefly as possible."
+    "If the output is too long, it will be truncated. "
+    "Only respond in JSON format, no other information. "
+    'Example of output for a perfect design: {"design_and_layout": 10, "content_relevance_and_effectiveness": 10, "typography_and_color_scheme": 10, "graphics_and_images": 10, "innovation_and_originality": 10} '
+    "Grading criteria\n"
+    "Design and Layout (name: design_and_layout, range: 1-10): The graphic design should present a clean, balanced, and consistent layout. "
+    "The organization of elements should enhance the message, with clear paths for the eye to follow. "
+    "A score of 10 signifies a layout that maximizes readability and visual appeal, while a 1 indicates a cluttered, confusing layout with no clear hierarchy or flow. "
+    "Content Relevance and Effectiveness (name: content_relevance_and_effectiveness, range: 1-10): The content should be not only relevant to its purpose but also engaging for the intended audience, effectively communicating the intended message."
+    "A score of 10 means the content resonates with the target audience, aligns with the design’s purpose, and enhances the overall message. "
+    "A score of 1 indicates the content is irrelevant or does not connect with the audience. "
+    "Typography and Color Scheme (name: typography_and_color_scheme, range: 1-10): Typography and color should work together to enhance readability and harmonize with other design elements."
+    "This includes font selection, size, line spacing, color, and placement, as well as the overall color scheme of the design. "
+    "A score of 10 represents excellent use of typography and color that aligns with the design’s purpose and aesthetic, while a score of 1 indicates poor use of these elements that hinders readability or clashes with the design."
+    "Graphics and Images (name: graphics_and_images, range: 1-10): Any graphics or images used should enhance the design rather than distract from it. They should be high quality, relevant, and harmonious with other elements. "
+    "A score of 10 indicates graphics or images that enhance the overall design and message, while a 1 indicates low-quality, irrelevant, or distracting visuals."
+    "Innovation and Originality (name: innovation_and_originality, range: 1-10): The design should display an original, creative approach. It should not just follow trends but also show a unique interpretation of the brief. "
+    "A score of 10 indicates a highly creative and innovative design that stands out in its originality, while a score of 1 indicates a lack of creativity or a generic approach."
+)
 
 
 if __name__ == "__main__":
