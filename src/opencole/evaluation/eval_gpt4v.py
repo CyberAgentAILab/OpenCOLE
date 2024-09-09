@@ -102,7 +102,7 @@ def main() -> None:
                                     "type": "image_url",
                                     "image_url": {
                                         "url": local_image_to_data_url(
-                                            str(pair_image_path)
+                                            str(image_path)
                                         ),
                                         "detail": "low",
                                     },
