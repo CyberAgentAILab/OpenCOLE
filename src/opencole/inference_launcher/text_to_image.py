@@ -62,7 +62,7 @@ def main(DetailClass: type[Detail]):
         with open(json_path, "r") as f:
             detail = DetailClass(**json.load(f))
 
-        output = tester(detail)
+        output = tester(prompt=detail.serialize_t2i_input())
         output.save(str(output_path))
 
 
