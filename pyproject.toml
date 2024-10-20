@@ -19,7 +19,7 @@ torchvision = [
   {version = "^0.17.1+cu121", platform = "linux", source = "torch_cu121"},
 ]
 diffusers = ">=0.30.0"
-langchain = "*"
+langchain = "^0.2"
 bitsandbytes = "*"
 protobuf = "*"
 peft = "*"
@@ -41,6 +41,9 @@ faiss-cpu = "*"
 seaborn = "*"
 pydantic = ">=2.5.2"
 pinjected = "*"
+beautifulsoup4 = "^4.12.3"
+ftfy = "^6.3.0"
+langchain-community = "^0.2"
 
 [[tool.poetry.source]]
 name = "torch_cu121"
