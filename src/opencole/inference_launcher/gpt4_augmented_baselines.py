@@ -33,7 +33,7 @@ def main() -> None:
     sub_args, _ = sub_parser.parse_known_args()
 
     tester = tester_class(**vars(sub_args))
-    inputs: list[TestInput] = load_cole_data(split_name="designerintention_v1")
+    inputs: list[TestInput] = load_cole_data(split_name=args.split_name)
     if args.first_n is not None:
         inputs = inputs[: args.first_n]
 

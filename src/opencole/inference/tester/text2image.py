@@ -16,8 +16,10 @@ from diffusers import (
     DiffusionPipeline,
     DPMSolverMultistepScheduler,
     FluxPipeline,
+    PixArtSigmaPipeline,
     StableDiffusion3Pipeline,
     StableDiffusionXLPipeline,
+    Transformer2DModel,
     UNet2DConditionModel,
 )
 from PIL import Image
@@ -476,6 +478,40 @@ class DeepFloydTester(BASET2ITester):
         return image
 
 
+class PixArtSigmaTester(BASET2ITester):
+    # https://github.com/PixArt-alpha/PixArt-sigma
+    def __init__(
+        self,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(**kwargs)
+
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        weight_dtype = torch.float16
+
+        transformer = Transformer2DModel.from_pretrained(
+            "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+            subfolder="transformer",
+            torch_dtype=weight_dtype,
+            use_safetensors=True,
+        )
+        pipe = PixArtSigmaPipeline.from_pretrained(
+            "PixArt-alpha/pixart_sigma_sdxlvae_T5_diffusers",
+            transformer=transformer,
+            torch_dtype=weight_dtype,
+            use_safetensors=True,
+        )
+        pipe.to(device)
+        self._pipeline = pipe
+
+        self._sampling_kwargs["negative_prompt"] = NEGATIVE
+
+    def __call__(self, prompt: str) -> Image.Image:
+        kwargs = {**self.size_sampler(), **self.sampling_kwargs}
+        image = self._pipeline(prompt=prompt, **kwargs).images[0]
+        return image
+
+
 T2I_TESTER_MAPPING = {
     "deepfloyd": DeepFloydTester,
     "sdxl": SDXLTester,
@@ -483,6 +519,7 @@ T2I_TESTER_MAPPING = {
     "dalle3": DALLE3Tester,
     "flux1": FluxTester,
     "auraflow": AuraFlowTester,
+    "pixartsigma": PixArtSigmaTester,
 }
 
 
