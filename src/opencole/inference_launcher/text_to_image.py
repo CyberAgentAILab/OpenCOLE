@@ -3,7 +3,7 @@ import json
 import logging
 from pathlib import Path
 
-from opencole.inference.tester.text2image import T2ITester
+from opencole.inference.tester.text2image import SDXLTester
 from opencole.schema import Detail, DetailV1
 
 logger = logging.getLogger(__name__)
@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 def main(DetailClass: type[Detail]):
     parser = argparse.ArgumentParser()
-    T2ITester.register_args(parser)
+    SDXLTester.register_args(parser)
 
     # weights
     parser.add_argument(
@@ -38,7 +38,7 @@ def main(DetailClass: type[Detail]):
     if not output_dir.exists():
         output_dir.mkdir()
 
-    tester = T2ITester(
+    tester = SDXLTester(
         **{
             k: v
             for (k, v) in vars(args).items()
