@@ -10,7 +10,6 @@ from sklearn.cluster import KMeans
 
 EPS_RELATIVE = 1e-3
 
-logging.basicConfig()
 logger = logging.getLogger(__name__)
 
 

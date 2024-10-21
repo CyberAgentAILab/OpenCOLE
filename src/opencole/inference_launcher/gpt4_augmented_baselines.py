@@ -19,13 +19,13 @@ def main() -> None:
     parser.add_argument("--tester", type=str, choices=t2i_tester_names(), required=True)
     parser.add_argument("--output_dir", type=str, required=True)
     parser.add_argument("--first_n", type=int, default=None)
+    parser.add_argument("--split_name", type=str, default="designerintention_v1")
     args, _ = parser.parse_known_args()
     logger.info(f"{args=}")
 
     tester_class = t2itester_factory(args.tester)
     output_dir = Path(args.output_dir)
-    if not output_dir.exists():
-        output_dir.mkdir()
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     # get tester-specific arguments
     sub_parser = argparse.ArgumentParser()
@@ -33,7 +33,7 @@ def main() -> None:
     sub_args, _ = sub_parser.parse_known_args()
 
     tester = tester_class(**vars(sub_args))
-    inputs: list[TestInput] = load_cole_data(split_name="designerintention_v1")
+    inputs: list[TestInput] = load_cole_data(split_name=args.split_name)
     if args.first_n is not None:
         inputs = inputs[: args.first_n]
 

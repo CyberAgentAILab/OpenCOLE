@@ -38,6 +38,12 @@ def main() -> None:
         type=str,
         default=None,
     )
+    parser.add_argument(
+        "--split_name",
+        type=str,
+        default="designerintention_v1",
+        choices=["designerintention_v1", "designerintention_v2"],
+    )
     parser.add_argument("--first_n", type=int, default=None)
 
     # model type
@@ -123,17 +129,20 @@ def main() -> None:
         #  If not set, designer intention v1 dataset will be used.
         examples_test = [
             Example(intention=IntentionV1(content=x.prompt).json(), id=x.id)
-            for x in load_cole_data(split_name="designerintention_v1")
+            for x in load_cole_data(split_name=args.split_name)
         ]
 
     if args.first_n is not None:
         examples_test = examples_test[: args.first_n]
 
     for example in examples_test:
+        output_path = output_dir / f"{example.id}.json"
+        if output_path.exists():
+            continue
+
         logger.info(f"Processing {example.id=} {example.intention=}...")
         detail = tester({"intention": example.intention})
 
-        output_path = output_dir / f"{example.id}.json"
         with output_path.open("w") as f:
             json.dump(detail.dict(), f, indent=4)
 

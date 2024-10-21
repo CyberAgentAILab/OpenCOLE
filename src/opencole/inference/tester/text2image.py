@@ -3,7 +3,6 @@ import json
 import math
 import os
 import random
-from functools import partial
 from io import BytesIO
 from typing import Any
 
@@ -17,8 +16,10 @@ from diffusers import (
     DiffusionPipeline,
     DPMSolverMultistepScheduler,
     FluxPipeline,
+    PixArtSigmaPipeline,
     StableDiffusion3Pipeline,
     StableDiffusionXLPipeline,
+    Transformer2DModel,
     UNet2DConditionModel,
 )
 from PIL import Image
@@ -276,12 +277,12 @@ class FluxTester(BASET2ITester):
     # https://huggingface.co/docs/diffusers/main/en/api/pipelines/flux
     def __init__(
         self,
-        pretrained_model_name_or_path: str,
-        enable_model_cpu_offload: bool = True,
-        run_on_low_vram_gpus: bool = True,  # to run on low vram GPUs (i.e. between 4 and 32 GB VRAM)
+        pretrained_model_name_or_path: str = "black-forest-labs/FLUX.1-dev",
+        run_on_low_vram_gpus: bool = False,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
+        enable_model_cpu_offload: bool = True
 
         if "schnell" in pretrained_model_name_or_path:
             # https://huggingface.co/docs/diffusers/main/en/api/pipelines/flux#timestep-distilled
@@ -306,6 +307,25 @@ class FluxTester(BASET2ITester):
             if enable_model_cpu_offload:
                 pipeline.enable_model_cpu_offload()
         self._pipeline = pipeline
+
+    @classmethod
+    def register_args(cls, parser: argparse.ArgumentParser) -> None:
+        super().register_args(parser)
+        parser.add_argument(
+            "--pretrained_model_name_or_path",
+            type=str,
+            default="black-forest-labs/FLUX.1-dev",
+            choices=[
+                "black-forest-labs/FLUX.1-dev",
+                "black-forest-labs/FLUX.1-schnell",
+            ],
+        )
+        parser.add_argument(
+            "--run_on_low_vram_gpus",
+            action="store_true",
+            default=False,
+            help="to run on low vram GPUs (i.e. between 4 and 32 GB VRAM)",
+        )
 
     def __call__(self, prompt: str) -> Image.Image:
         kwargs = {**self.size_sampler(), **self.sampling_kwargs}
@@ -429,7 +449,7 @@ class DeepFloydTester(BASET2ITester):
             self.stage_3.enable_model_cpu_offload()
 
     def __call__(self, prompt: str) -> Image.Image:
-        width, height = self._size_sampler()
+        res = self._size_sampler()
 
         prompt_embeds, negative_embeds = self.stage_1.encode_prompt(prompt)
         image = self.stage_1(
@@ -437,8 +457,8 @@ class DeepFloydTester(BASET2ITester):
             negative_prompt_embeds=negative_embeds,
             generator=self.generator,
             output_type="pt",
-            width=width // 16,
-            height=height // 16,
+            width=res["width"] // 16,
+            height=res["height"] // 16,
         ).images
         image = self.stage_2(
             image=image,
@@ -446,8 +466,8 @@ class DeepFloydTester(BASET2ITester):
             negative_prompt_embeds=negative_embeds,
             generator=self.generator,
             output_type="pt",
-            width=width // 4,
-            height=height // 4,
+            width=res["width"] // 4,
+            height=res["height"] // 4,
         ).images
         image = self.stage_3(
             prompt=prompt,
@@ -458,18 +478,48 @@ class DeepFloydTester(BASET2ITester):
         return image
 
 
+class PixArtSigmaTester(BASET2ITester):
+    # https://github.com/PixArt-alpha/PixArt-sigma
+    def __init__(
+        self,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(**kwargs)
+
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        weight_dtype = torch.float16
+
+        transformer = Transformer2DModel.from_pretrained(
+            "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+            subfolder="transformer",
+            torch_dtype=weight_dtype,
+            use_safetensors=True,
+        )
+        pipe = PixArtSigmaPipeline.from_pretrained(
+            "PixArt-alpha/pixart_sigma_sdxlvae_T5_diffusers",
+            transformer=transformer,
+            torch_dtype=weight_dtype,
+            use_safetensors=True,
+        )
+        pipe.to(device)
+        self._pipeline = pipe
+
+        self._sampling_kwargs["negative_prompt"] = NEGATIVE
+
+    def __call__(self, prompt: str) -> Image.Image:
+        kwargs = {**self.size_sampler(), **self.sampling_kwargs}
+        image = self._pipeline(prompt=prompt, **kwargs).images[0]
+        return image
+
+
 T2I_TESTER_MAPPING = {
     "deepfloyd": DeepFloydTester,
     "sdxl": SDXLTester,
     "sd3": SD3Tester,
     "dalle3": DALLE3Tester,
-    "flux1_dev": partial(
-        FluxTester, pretrained_model_name_or_path="black-forest-labs/FLUX.1-dev"
-    ),
-    "flux1_schnell": partial(
-        FluxTester, pretrained_model_name_or_path="black-forest-labs/FLUX.1-schnell"
-    ),
+    "flux1": FluxTester,
     "auraflow": AuraFlowTester,
+    "pixartsigma": PixArtSigmaTester,
 }
 
 
