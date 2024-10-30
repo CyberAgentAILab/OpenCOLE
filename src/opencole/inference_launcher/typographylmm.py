@@ -4,7 +4,6 @@ import logging
 import os
 from pathlib import Path
 
-import torch
 from langchain.output_parsers import PydanticOutputParser
 from PIL import Image
 
@@ -18,8 +17,6 @@ from opencole.schema import Detail, DetailV1
 
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 logger = logging.getLogger(__name__)
-
-torch.set_default_dtype(torch.float16)
 
 
 def main(DetailClass: type[Detail]) -> None:
