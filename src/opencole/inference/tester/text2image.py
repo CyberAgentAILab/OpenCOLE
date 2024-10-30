@@ -12,6 +12,7 @@ import torch
 from compel import Compel, ReturnedEmbeddingsType
 from diffusers import (
     AuraFlowPipeline,
+    BitsAndBytesConfig,
     DDPMScheduler,
     DiffusionPipeline,
     DPMSolverMultistepScheduler,
@@ -237,29 +238,69 @@ class SDXLTester(BASET2ITester):
 class SD3Tester(BASET2ITester):
     def __init__(
         self,
-        pretrained_model_name_or_path: str = "stabilityai/stable-diffusion-3-medium-diffusers",
-        use_compel: bool = True,
-        use_negative_prompts: bool = True,
-        guidance_scale: float = 7.5,
-        num_inference_steps: int = 30,
+        pretrained_model_name_or_path: str = "stabilityai/stable-diffusion-3.5-large",
+        use_quantization: bool = False,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
-        self._use_compel = use_compel
+        use_negative_prompts: bool = True
+        enable_model_cpu_offload: bool = True
+
+        assert pretrained_model_name_or_path.startswith(
+            "stabilityai/stable-diffusion-3"
+        )
+        if "stable-diffusion-3-" in pretrained_model_name_or_path:
+            # https://huggingface.co/blog/sd3
+            self._sampling_kwargs["guidance_scale"] = 7.5
+            self._sampling_kwargs["num_inference_steps"] = 30
+        elif "stabilityai/stable-diffusion-3.5" in pretrained_model_name_or_path:
+            # https://huggingface.co/blog/sd3-5
+            self._sampling_kwargs["guidance_scale"] = 4.5
+            self._sampling_kwargs["num_inference_steps"] = 40
+        else:
+            raise NotImplementedError
+
         self._use_negative_prompts = use_negative_prompts
-
-        self._sampling_kwargs["guidance_scale"] = guidance_scale
-        self._sampling_kwargs["num_inference_steps"] = num_inference_steps
-
         pipeline_kwargs = {
             "pretrained_model_name_or_path": pretrained_model_name_or_path,
             "torch_dtype": torch.bfloat16,
         }
 
+        if use_quantization:
+            nf4_config = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_quant_type="nf4",
+                bnb_4bit_compute_dtype=torch.bfloat16,
+            )
+            pipeline_kwargs["subfolder"] = "transformer"
+            pipeline_kwargs["quantization_config"] = nf4_config
+
         pipeline = StableDiffusion3Pipeline.from_pretrained(**pipeline_kwargs)
         pipeline.to("cuda")
 
+        if enable_model_cpu_offload:
+            pipeline.enable_model_cpu_offload()
+
         self._pipeline = pipeline
+
+    @classmethod
+    def register_args(cls, parser: argparse.ArgumentParser) -> None:
+        super().register_args(parser)
+        parser.add_argument(
+            "--pretrained_model_name_or_path",
+            type=str,
+            default="stabilityai/stable-diffusion-3.5-large",
+            choices=[
+                "stabilityai/stable-diffusion-3.5-large",
+                "stabilityai/stable-diffusion-3-medium-diffusers",
+            ],
+        )
+        parser.add_argument(
+            "--use_quantization",
+            action="store_true",
+            default=False,
+            help="to use negative prompts",
+        )
 
     def __call__(self, prompt: str) -> Image.Image:
         kwargs = {**self.size_sampler(), **self.sampling_kwargs}
