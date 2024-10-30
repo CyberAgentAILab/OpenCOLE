@@ -127,6 +127,7 @@ def get_element_pydantic_model(
     description: used to enrich description for parser.get_format_instructions()
     validator: used to check the format violation for parser.parse()
     """
+
     assert all([key in class_label_mappings for key in schema.categorical_keys]), (
         class_label_mappings,
         schema.categorical_keys,

@@ -347,7 +347,7 @@ def load_llava(
 ) -> tuple[LlavaForConditionalGeneration, LlavaProcessor]:
     assert not (load_in_4bit and load_in_8bit), "Cannot load both 4bit and 8bit models"
     kwargs: dict[str, Any] = {"device_map": "auto"}
-    kwargs["torch_dtype"] = torch.float16
+    kwargs["torch_dtype"] = torch.bfloat16
     kwargs["low_cpu_mem_usage"] = True
     kwargs["use_safetensors"] = True
     kwargs["offload_state_dict"] = False
