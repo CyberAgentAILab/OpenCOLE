@@ -239,12 +239,11 @@ class SD3Tester(BASET2ITester):
     def __init__(
         self,
         pretrained_model_name_or_path: str = "stabilityai/stable-diffusion-3.5-large",
-        use_negative_prompts: bool = True,
         use_quantization: bool = False,
-        # use_compel: bool = True,  # TODO: enable compel
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
+        use_negative_prompts: bool = True
         enable_model_cpu_offload: bool = True
 
         assert pretrained_model_name_or_path.startswith(
