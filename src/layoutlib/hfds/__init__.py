@@ -13,7 +13,11 @@ _DATASET_HFDS_MAPPING = {
 
 
 def hfds_factory(hfds_name: str) -> ds.dataset_dict.DatasetDict:
-    return ds.load_dataset(_DATASET_HFDS_MAPPING[hfds_name])
+    if hfds_name == "crello":
+        # note: schema has changed in 5.0.0
+        return ds.load_dataset(_DATASET_HFDS_MAPPING["crello"], revision="4.0.0")
+    else:
+        return ds.load_dataset(_DATASET_HFDS_MAPPING[hfds_name])
 
 
 def hfds_names() -> list[str]:
@@ -63,14 +67,24 @@ def hfds_helper_factory(
     hfds_name: str, features: ds.Features | None = None
 ) -> BaseHFDSHelper:
     if features is None:
-        features = ds.load_dataset(_DATASET_HFDS_MAPPING[hfds_name], split="test")[
-            "features"
-        ]
+        if hfds_name == "crello":
+            features = ds.load_dataset(
+                _DATASET_HFDS_MAPPING[hfds_name], split="test", revision="4.0.0"
+            )["features"]
+        else:
+            features = ds.load_dataset(_DATASET_HFDS_MAPPING[hfds_name], split="test")[
+                "features"
+            ]
     return _HFDS_HELPER_FACTORY[hfds_name](features=features)
 
 
 def sample_example(hfds_name: str) -> tuple[Example, ds.Features]:
     assert hfds_name in _DATASET_HFDS_MAPPING, hfds_name
-    dataset = ds.load_dataset(_DATASET_HFDS_MAPPING[hfds_name], split="test[:1%]")
+    if hfds_name == "crello":
+        dataset = ds.load_dataset(
+            _DATASET_HFDS_MAPPING[hfds_name], split="test[:1%]", revision="4.0.0"
+        )
+    else:
+        dataset = ds.load_dataset(_DATASET_HFDS_MAPPING[hfds_name], split="test[:1%]")
     example = dataset[random.randint(0, len(dataset) - 1)]
     return example, dataset.features
