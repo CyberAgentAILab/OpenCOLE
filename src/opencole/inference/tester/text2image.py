@@ -18,6 +18,7 @@ from diffusers import (
     DPMSolverMultistepScheduler,
     FluxPipeline,
     PixArtSigmaPipeline,
+    SanaPipeline,
     StableDiffusion3Pipeline,
     StableDiffusionXLPipeline,
     Transformer2DModel,
@@ -314,6 +315,48 @@ class SD3Tester(BASET2ITester):
         return image
 
 
+class SanaTester(BASET2ITester):
+    # https://huggingface.co/docs/diffusers/main/en/api/pipelines/sana
+    def __init__(
+        self,
+        pretrained_model_name_or_path: str = "Efficient-Large-Model/Sana_1600M_1024px_BF16_diffusers",
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(**kwargs)
+        self._pipeline = SanaPipeline.from_pretrained(
+            pretrained_model_name_or_path,
+            torch_dtype=torch.float32,
+        ).to("cuda")
+        self._pipeline.text_encoder.to(torch.bfloat16)
+        transformer_dtype = (
+            torch.bfloat16 if "BF16" in pretrained_model_name_or_path else torch.float16
+        )
+        self._pipeline.transformer = self._pipeline.transformer.to(transformer_dtype)
+
+    @classmethod
+    def register_args(cls, parser: argparse.ArgumentParser) -> None:
+        super().register_args(parser)
+        parser.add_argument(
+            "--pretrained_model_name_or_path",
+            type=str,
+            default="Efficient-Large-Model/Sana_1600M_1024px_BF16_diffusers",
+            choices=[
+                "Efficient-Large-Model/Sana_1600M_1024px_BF16_diffusers",
+                "Efficient-Large-Model/Sana_1600M_1024px_diffusers",
+                "Efficient-Large-Model/Sana_1600M_1024px_MultiLing_diffusers",
+                "Efficient-Large-Model/Sana_1600M_512px_diffusers",
+                "Efficient-Large-Model/Sana_1600M_512px_MultiLing_diffusers",
+                "Efficient-Large-Model/Sana_600M_1024px_diffusers",
+                "Efficient-Large-Model/Sana_600M_512px_diffusers",
+            ],
+        )
+
+    def __call__(self, prompt: str) -> Image.Image:
+        kwargs = {**self.size_sampler(), **self.sampling_kwargs}
+        image = self._pipeline(prompt=prompt, **kwargs).images[0]
+        return image
+
+
 class FluxTester(BASET2ITester):
     # https://huggingface.co/docs/diffusers/main/en/api/pipelines/flux
     def __init__(
@@ -557,6 +600,7 @@ T2I_TESTER_MAPPING = {
     "deepfloyd": DeepFloydTester,
     "sdxl": SDXLTester,
     "sd3": SD3Tester,
+    "sana": SanaTester,
     "dalle3": DALLE3Tester,
     "flux1": FluxTester,
     "auraflow": AuraFlowTester,
