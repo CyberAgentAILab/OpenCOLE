@@ -243,3 +243,5 @@ poetry.lock
 # Artifacts
 artifacts
 training_output
+
+uv.lock

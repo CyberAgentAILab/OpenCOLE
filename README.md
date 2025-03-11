@@ -33,7 +33,7 @@
 
 ## Requirements
 
-- [poetry](https://python-poetry.org/)
+- [uv](https://astral.sh/blog/uv)
 - [direnv](https://github.com/direnv/direnv)
 
 ## Install
@@ -68,7 +68,7 @@ Please refer to [inference.md](./docs/inference.md).
 We provide a script for GPT4V-based evaluation on generated images.
 
 ```python
-poetry run python -m opencole.evaluation.eval_gpt4v --input_dir <INPUT_DIR> --output_path <OUTPUT_PATH>
+uv run python -m opencole.evaluation.eval_gpt4v --input_dir <INPUT_DIR> --output_path <OUTPUT_PATH>
 ```
 
 # Training
