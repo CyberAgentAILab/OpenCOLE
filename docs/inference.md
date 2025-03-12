@@ -52,5 +52,5 @@ As the original [COLE](https://arxiv.org/abs/2311.16974) tested, text-to-image m
 Three models (two are from HF and one is API(AzureOpenAI)) can be used by just switching `--tester`.
 
 ```
-uv run python -m opencole.inference_launcher.gpt4_augmented_baselines --tester (sdxl|sd3|deepfloyd|dalle3|flux1|auraflow|pixartsigma) --output_dir <OUTPUT_DIR>
+uv run python -m opencole.inference_launcher.gpt4_augmented_baselines --tester (auraflow|cogview4|dalle3|deepfloyd|flux1|pixartsigma|sana|sdxl|sd3) --output_dir <OUTPUT_DIR>
 ```
