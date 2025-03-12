@@ -13,6 +13,7 @@ from compel import Compel, ReturnedEmbeddingsType
 from diffusers import (
     AuraFlowPipeline,
     BitsAndBytesConfig,
+    CogView4Pipeline,
     DDPMScheduler,
     DiffusionPipeline,
     DPMSolverMultistepScheduler,
@@ -159,17 +160,17 @@ class SDXLTester(BASET2ITester):
         self._use_compel = use_compel
         self._use_negative_prompts = use_negative_prompts
 
-        self._sampling_kwargs["guidance_scale"] = guidance_scale
-        self._sampling_kwargs["num_inference_steps"] = num_inference_steps
+        self.sampling_kwargs["guidance_scale"] = guidance_scale
+        self.sampling_kwargs["num_inference_steps"] = num_inference_steps
 
         pipeline_kwargs = {
             "pretrained_model_name_or_path": pretrained_model_name_or_path,
             "torch_dtype": torch.bfloat16,
         }
 
-        assert not (
-            finetuned_unet_dir is not None and lora_weights_path is not None
-        ), "Two models cannot be loaded at the same time"
+        assert not (finetuned_unet_dir is not None and lora_weights_path is not None), (
+            "Two models cannot be loaded at the same time"
+        )
 
         if finetuned_unet_dir is not None:
             pipeline_kwargs["unet"] = UNet2DConditionModel.from_pretrained(
@@ -252,12 +253,12 @@ class SD3Tester(BASET2ITester):
         )
         if "stable-diffusion-3-" in pretrained_model_name_or_path:
             # https://huggingface.co/blog/sd3
-            self._sampling_kwargs["guidance_scale"] = 7.5
-            self._sampling_kwargs["num_inference_steps"] = 30
+            self.sampling_kwargs["guidance_scale"] = 7.5
+            self.sampling_kwargs["num_inference_steps"] = 30
         elif "stabilityai/stable-diffusion-3.5" in pretrained_model_name_or_path:
             # https://huggingface.co/blog/sd3-5
-            self._sampling_kwargs["guidance_scale"] = 4.5
-            self._sampling_kwargs["num_inference_steps"] = 40
+            self.sampling_kwargs["guidance_scale"] = 4.5
+            self.sampling_kwargs["num_inference_steps"] = 40
         else:
             raise NotImplementedError
 
@@ -282,7 +283,7 @@ class SD3Tester(BASET2ITester):
         if enable_model_cpu_offload:
             pipeline.enable_model_cpu_offload()
 
-        self._pipeline = pipeline
+        self.pipeline = pipeline
 
     @classmethod
     def register_args(cls, parser: argparse.ArgumentParser) -> None:
@@ -307,11 +308,11 @@ class SD3Tester(BASET2ITester):
         kwargs = {**self.size_sampler(), **self.sampling_kwargs}
 
         if self._use_negative_prompts:
-            image = self._pipeline(
+            image = self.pipeline(
                 prompt=prompt, negative_prompt=NEGATIVE, **kwargs
             ).images[0]
         else:
-            image = self._pipeline(prompt=prompt, **kwargs).images[0]
+            image = self.pipeline(prompt=prompt, **kwargs).images[0]
         return image
 
 
@@ -323,15 +324,15 @@ class SanaTester(BASET2ITester):
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
-        self._pipeline = SanaPipeline.from_pretrained(
+        self.pipeline = SanaPipeline.from_pretrained(
             pretrained_model_name_or_path,
             torch_dtype=torch.float32,
         ).to("cuda")
-        self._pipeline.text_encoder.to(torch.bfloat16)
+        self.pipeline.text_encoder.to(torch.bfloat16)
         transformer_dtype = (
             torch.bfloat16 if "BF16" in pretrained_model_name_or_path else torch.float16
         )
-        self._pipeline.transformer = self._pipeline.transformer.to(transformer_dtype)
+        self.pipeline.transformer = self.pipeline.transformer.to(transformer_dtype)
 
     @classmethod
     def register_args(cls, parser: argparse.ArgumentParser) -> None:
@@ -353,7 +354,7 @@ class SanaTester(BASET2ITester):
 
     def __call__(self, prompt: str) -> Image.Image:
         kwargs = {**self.size_sampler(), **self.sampling_kwargs}
-        image = self._pipeline(prompt=prompt, **kwargs).images[0]
+        image = self.pipeline(prompt=prompt, **kwargs).images[0]
         return image
 
 
@@ -370,13 +371,13 @@ class FluxTester(BASET2ITester):
 
         if "schnell" in pretrained_model_name_or_path:
             # https://huggingface.co/docs/diffusers/main/en/api/pipelines/flux#timestep-distilled
-            self._sampling_kwargs["guidance_scale"] = 0.0
-            self._sampling_kwargs["num_inference_steps"] = 4
-            self._sampling_kwargs["max_sequence_length"] = 256
+            self.sampling_kwargs["guidance_scale"] = 0.0
+            self.sampling_kwargs["num_inference_steps"] = 4
+            self.sampling_kwargs["max_sequence_length"] = 256
         elif "dev" in pretrained_model_name_or_path:
             # https://huggingface.co/docs/diffusers/main/en/api/pipelines/flux#guidance-distilled
-            self._sampling_kwargs["guidance_scale"] = 7.5
-            self._sampling_kwargs["num_inference_steps"] = 30
+            self.sampling_kwargs["guidance_scale"] = 7.5
+            self.sampling_kwargs["num_inference_steps"] = 30
         else:
             raise NotImplementedError
 
@@ -390,7 +391,7 @@ class FluxTester(BASET2ITester):
         else:
             if enable_model_cpu_offload:
                 pipeline.enable_model_cpu_offload()
-        self._pipeline = pipeline
+        self.pipeline = pipeline
 
     @classmethod
     def register_args(cls, parser: argparse.ArgumentParser) -> None:
@@ -416,7 +417,7 @@ class FluxTester(BASET2ITester):
         # note:
         # - negative prompts are not supported in Flux
         # - longer max_sequence_length allows us to avoid using compel
-        image = self._pipeline(prompt=prompt, **kwargs).images[0]
+        image = self.pipeline(prompt=prompt, **kwargs).images[0]
         return image
 
 
@@ -427,17 +428,17 @@ class AuraFlowTester(BASET2ITester):
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
-        self._pipeline = AuraFlowPipeline.from_pretrained(
+        self.pipeline = AuraFlowPipeline.from_pretrained(
             "fal/AuraFlow", torch_dtype=torch.float16
         ).to("cuda")
 
         # note: following default parameters in the doc:
-        self._sampling_kwargs["guidance_scale"] = 3.5
-        self._sampling_kwargs["num_inference_steps"] = 50
+        self.sampling_kwargs["guidance_scale"] = 3.5
+        self.sampling_kwargs["num_inference_steps"] = 50
 
     def __call__(self, prompt: str) -> Image.Image:
         kwargs = {**self.size_sampler(), **self.sampling_kwargs}
-        image = self._pipeline(prompt=prompt, **kwargs).images[0]
+        image = self.pipeline(prompt=prompt, **kwargs).images[0]
         return image
 
 
@@ -586,25 +587,56 @@ class PixArtSigmaTester(BASET2ITester):
             use_safetensors=True,
         )
         pipe.to(device)
-        self._pipeline = pipe
+        self.pipeline = pipe
 
-        self._sampling_kwargs["negative_prompt"] = NEGATIVE
+        self.sampling_kwargs["negative_prompt"] = NEGATIVE
 
     def __call__(self, prompt: str) -> Image.Image:
         kwargs = {**self.size_sampler(), **self.sampling_kwargs}
-        image = self._pipeline(prompt=prompt, **kwargs).images[0]
+        image = self.pipeline(prompt=prompt, **kwargs).images[0]
+        return image
+
+
+class CogView4Tester(BASET2ITester):
+    # https://github.com/PixArt-alpha/PixArt-sigma
+    def __init__(
+        self,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(**kwargs)
+        enable_model_cpu_offload: bool = True
+
+        pipe = CogView4Pipeline.from_pretrained(
+            "THUDM/CogView4-6B", torch_dtype=torch.bfloat16
+        )
+        if enable_model_cpu_offload:
+            # Offloading automatically takes care of moving the individual components to GPU when needed.
+            pipe.enable_model_cpu_offload()
+        else:
+            pipe = pipe.to("cuda")
+        pipe.vae.enable_slicing()
+        pipe.vae.enable_tiling()
+        self.pipeline = pipe
+
+        self.sampling_kwargs["guidance_scale"] = 3.5
+        self.sampling_kwargs["num_inference_steps"] = 50
+
+    def __call__(self, prompt: str) -> Image.Image:
+        kwargs = {**self.size_sampler(), **self.sampling_kwargs}
+        image = self.pipeline(prompt=prompt, **kwargs).images[0]
         return image
 
 
 T2I_TESTER_MAPPING = {
+    "auraflow": AuraFlowTester,
+    "cogview4": CogView4Tester,
+    "dalle3": DALLE3Tester,
     "deepfloyd": DeepFloydTester,
+    "flux1": FluxTester,
+    "pixartsigma": PixArtSigmaTester,
+    "sana": SanaTester,
     "sdxl": SDXLTester,
     "sd3": SD3Tester,
-    "sana": SanaTester,
-    "dalle3": DALLE3Tester,
-    "flux1": FluxTester,
-    "auraflow": AuraFlowTester,
-    "pixartsigma": PixArtSigmaTester,
 }
 
 
