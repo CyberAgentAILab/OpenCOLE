@@ -136,6 +136,8 @@ def setup_prompt(
                 embeddings_cache_name=embeddings_cache_name,
             )
         )
+        # Add input_variables to template_kwargs
+        template_kwargs["input_variables"] = ["intention"]
         messages.append(FewShotChatMessagePromptTemplate(**template_kwargs))  # type: ignore
     messages.append(HumanMessagePromptTemplate.from_template(SUFFIX))
 
